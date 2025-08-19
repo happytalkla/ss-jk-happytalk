@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="template">
+
+	<resultMap id="templateResult" type="CMap">
+		<result property="tpl_num" column="tpl_num"/>
+		<result property="tpl_num1" column="tpl_num1"/>
+		<result property="tpl_num2" column="tpl_num2"/>
+		<result property="tpl_ctg_num" column="tpl_ctg_num"/>
+		<result property="tpl_div_cd" column="tpl_div_cd"/>
+		<result property="tpl_msg_div_cd" column="tpl_msg_div_cd"/>
+		<result property="cstm_que" column="cstm_que"/>
+		<result property="reply_cont" column="reply_cont" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="reply_cont_text" column="reply_cont_text"/>
+		<result property="org_img_nm" column="org_img_nm"/>
+		<result property="org_img_path" column="org_img_path"/>
+		<result property="member_uid" column="member_uid"/>
+		<result property="web_yn" column="web_yn"/>
+		<result property="android_yn" column="android_yn"/>
+		<result property="iphone_yn" column="iphone_yn"/>
+		<result property="top_mark_yn" column="top_mark_yn"/>
+		<result property="create_dt" column="create_dt"/>
+		<result property="creater" column="creater"/>
+		<result property="update_dt" column="update_dt"/>
+		<result property="updater" column="updater"/>
+		<collection
+				property="templateKwdList"
+				column="{tplNum=tpl_num1}"
+				select="selectTemplateKwdList"
+		/>
+<!--		<collection-->
+<!--				property="replyCont"-->
+<!--				column="{tplNum=tpl_num2}"-->
+<!--				select="selectReplyCont"-->
+<!--		/>-->
+	</resultMap>
+
+<!--	<resultMap id="contentsVO" type="ht.domain.ContentsVO">-->
+<!--		<result property="contents" column="contents" javaType="java.lang.String" jdbcType="CLOB"/>-->
+<!--	</resultMap>-->
+
+	<!-- 템플릿 카테고리 목록 조회 -->
+	<select id="selectTplCategoryList" resultType="CMap">
+		/* template.selectTplCategoryList */
+		select tpl_ctg_num
+			 , tpl_ctg_nm
+			 , to_char(create_dt, 'yyyy-mm-dd') as create_dt
+			 , creater
+		from shfda.tb_tpl_ctg
+		where 1=1 
+		<if test="departCd != null and !''.toString().equals(departCd.toString())">
+			and (depart_cd = #{departCd} or depart_cd is null)
+		</if>
+		order by tpl_ctg_nm
+	</select>
+
+	<!-- 템플릿 카테고리 등록 -->
+	<insert id="insertTplCtg">
+		/* template.insertTplCtg */
+		<selectKey keyProperty="tplCtgNum" order="BEFORE" resultType="String">
+			select shfda.seq_CTG_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_tpl_ctg (tpl_ctg_num, tpl_ctg_nm, create_dt, creater, depart_cd)
+		values(#{tplCtgNum}, #{tplCtgNm}, sysdate, #{sessionMemberUid}, #{departCd})
+	</insert>
+
+	<!-- 템플릿 카테고리 수정 -->
+	<insert id="updateTplCtg">
+		/* template.updateTplCtg */
+		update shfda.tb_tpl_ctg
+		set tpl_ctg_nm = #{tplCtgNm}
+		where tpl_ctg_num = #{tplCtgNum}
+	</insert>
+
+	<!-- 카테고리의 템플릿 개수 조회 -->
+	<select id="selectTplCtgCnt" resultType="int">
+		/* template.selectTplCtgCnt */
+		select count(tpl_num) as tplCount
+		from shfda.tb_tpl
+		where tpl_ctg_num = #{tplCtgNum}
+	</select>
+
+	<!-- 카테고리의 템플릿 삭제 -->
+	<delete id="deleteCtgTemplate">
+		/* template.deleteCtgTemplate */
+		delete from shfda.tb_tpl
+		where tpl_ctg_num = #{tplCtgNum}
+	</delete>
+
+	<!-- 템플릿 카테고리 삭제 -->
+	<delete id="deleteTplCtg">
+		/* template.deleteTplCtg */
+		delete from shfda.tb_tpl_ctg
+		where tpl_ctg_num = #{tplCtgNum}
+	</delete>
+
+	<!-- 템플릿 목록 조회 -->
+	<select id="selectTemplateList" resultMap="templateResult">
+		/* template.selectTemplateList */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select
+		t1.tpl_num
+		, t1.tpl_num as tpl_num1
+		, t1.tpl_num as tpl_num2
+		, t1.tpl_ctg_num
+		, t1.tpl_div_cd
+		, t1.tpl_msg_div_cd
+		, t1.cstm_que
+		, T1.REPLY_CONT
+		, t1.reply_cont_text
+		, t1.org_img_nm
+		, t1.org_img_path
+		, t1.member_uid
+		, t1.web_yn
+		, t1.android_yn
+		, t1.iphone_yn
+		, t1.top_mark_yn
+		, to_char(t1.create_dt, 'yyyy-mm-dd') as create_dt
+		, t1.creater
+		, to_char(t1.update_dt, 'yyyy-mm-dd') as update_dt
+		, t1.updater
+		, t1.permit_yn as share_yn
+		, t2.member_nm
+		from shfda.tb_tpl t1
+		inner join
+		(
+		select distinct a.tpl_num, tmi.name as member_nm
+		from shfda.tb_tpl a
+		left outer join shfda.tb_tpl_kwd b on (a.tpl_num = b.tpl_num)
+		left outer join shfda.tb_member_info tmi on (tmi.member_uid = a.member_uid)
+		
+		where 1=1
+		<!-- 부서코드가 있을 경우
+				부서 null 값 (어드민 계정으로 생성된 데이터)
+				 + 부서 기준 G는 부서 전체공유 조건
+				 + 부서 기준 P는 내 템플릿만 선택
+			부서 코드가 없다면 G와 P 상관없이 검색 -->
+		<if test="departCd != null and !''.toString().equals(departCd.toString())">
+			and (a.depart_cd = #{departCd} or a.depart_cd is null)
+		</if>
+		<if test="tplDivCd != null and 'P'.toString().equals(tplDivCd)">
+			and ((a.tpl_div_cd = 'P' and a.member_uid = #{sessionMemberUid}) or a.tpl_div_cd = 'G')
+		</if>
+		<if test="schTplCtgNum != null and schTplCtgNum != ''.toString()">
+			and a.tpl_ctg_num = #{schTplCtgNum}
+		</if>
+/*
+		<if test="schDeviceType != null and schDeviceType == 'WEB'.toString()">
+			and a.web_yn = 'Y'
+		</if>
+
+		<if test="schDeviceType != null and schDeviceType == 'ANDROID'.toString()">
+			and a.android_yn = 'Y'
+		</if>
+
+		<if test="schDeviceType != null and schDeviceType == 'IPHONE'.toString()">
+			and a.iphone_yn = 'Y'
+		</if>
+*/
+		<if test="schText != null and schText != ''.toString()">
+			<choose>
+				<when test="schType != null and schType == 'ID'.toString()">
+					and (UPPER(tmi.name) like UPPER(#{schText}) || '%' or UPPER(tmi.coc_id) = UPPER(#{schText}) )
+				</when>
+				<when test="schType != null and schType == 'QUESTION'.toString()">
+					and instr(UPPER(a.cstm_que), UPPER(#{schText}), 1, 1) > 0
+				</when>
+				<when test="schType != null and schType == 'ANSWER'.toString()">
+					and instr(UPPER(a.reply_cont_text), UPPER(#{schText}), 1, 1) > 0
+				</when>
+				<when test="schType != null and schType == 'KEYWORD'.toString()">
+					and UPPER(b.kwd_nm) = UPPER(#{schText})
+				</when>
+				<when test="schType != null and schType == 'ALL'.toString()">
+					and (UPPER(b.kwd_nm) = UPPER(#{schText})
+						or instr(UPPER(a.reply_cont_text), UPPER(#{schText}), 1, 1) > 0
+						or instr(UPPER(a.cstm_que), UPPER(#{schText}), 1, 1) > 0)
+				</when>
+			</choose>
+		</if>
+		) t2 on (t1.tpl_num = t2.tpl_num)
+		
+		where t1.permit_yn = 'Y' 
+		order by t1.top_mark_yn desc, to_number(t1.tpl_num) desc
+	</select>
+
+	<!-- 등록 대기중인 템플릿 목록 조회 -->
+	<select id="selectConfirmTplList" resultMap="templateResult">
+		/* template.selectConfirmTplList */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select a.tpl_num
+			 , a.tpl_num                          as tpl_num1
+			 , a.tpl_num                          as tpl_num2
+			 , a.tpl_ctg_num
+			 , a.tpl_div_cd
+			 , a.tpl_msg_div_cd
+			 , a.cstm_que
+			 , A.REPLY_CONT
+			 , a.reply_cont_text
+			 , a.org_img_nm
+			 , a.org_img_path
+			 , a.member_uid
+			 , a.web_yn
+			 , a.android_yn
+			 , a.iphone_yn
+			 , a.top_mark_yn
+			 , to_char(a.create_dt, 'yyyy-mm-dd') as create_dt
+			 , a.creater
+			 , to_char(a.update_dt, 'yyyy-mm-dd') as update_dt
+			 , a.updater
+			 , (select name from shfda.tb_member_info where member_uid = a.member_uid) as member_nm
+		from shfda.tb_tpl  a
+		where 1 = 1
+		  and permit_yn = 'N'
+		  <if test="departCd != null and !''.toString().equals(departCd.toString())">
+		  	and depart_cd = #{departCd}
+		  </if>
+		order by top_mark_yn desc, to_number(tpl_num) desc
+	</select>
+
+	<!-- 템플릿 키워드 목록 조회 -->
+	<select id="selectTemplateKwdList" resultType="CMap">
+		/* template.selectTemplateKwdList */
+		select
+		tpl_kwd_num
+		, tpl_num
+		, kwd_nm
+		, to_char(create_dt, 'yyyy-mm-dd') as create_dt
+		, creater
+		from shfda.tb_tpl_kwd
+		<where>
+			<if test="tplNum != null">
+				tpl_num = #{tplNum}
+			</if>
+		</where>
+		order by kwd_nm asc
+	</select>
+
+	<!-- 템플릿 메세지 -->
+<!--	<select id="selectReplyCont" resultMap="contentsVO">-->
+<!--		/* template.selectReplyCont */-->
+<!--		select reply_cont as contents-->
+<!--		from shfda.tb_tpl-->
+<!--		where tpl_num = #{tplNum}-->
+<!--	</select>-->
+
+	<!-- 템플릿 등록 -->
+	<insert id="insertTemplate">
+		/* template.insertTemplate */
+		/*<selectKey keyProperty="tplNum" order="BEFORE" resultType="String">
+			select shfda.seq_TPL_NUM.nextval from dual
+		</selectKey>*/
+		insert into shfda.tb_tpl
+		(
+		tpl_num
+		, tpl_ctg_num
+		, tpl_div_cd
+		, tpl_msg_div_cd
+		, cstm_que
+		, reply_cont
+		, reply_cont_text
+		, org_img_nm
+		, org_img_path
+		, org_pdf_nm
+		, org_pdf_path
+		, org_mime_type
+		, tpl_pdf_btn		
+		, member_uid
+		, web_yn
+		, android_yn
+		, iphone_yn
+		, top_mark_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, depart_cd
+		, permit_yn
+		)
+		values
+		(
+		#{tplNum}
+		, #{tplCtgNum}
+		, #{tplDivCd}
+		, #{tplMsgDivCd}
+		, #{cstmQue}
+		, #{replyCont}
+		, #{replyContText}
+		, #{orgImgNm}
+		, #{orgImgPath}
+		, #{orgPdfNm}
+		, #{orgPdfPath}		
+		, #{orgMimeType}
+		, #{tplPdfBtn}				
+		, #{sessionMemberUid}
+		, #{webYn}
+		, #{androidYn}
+		, #{iphoneYn}
+		, #{topMarkYn}
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, (select depart_cd from shfda.tb_tpl_ctg where tpl_ctg_num = #{tplCtgNum})
+		, #{permitYn}
+		)
+	</insert>
+
+	<!-- 템플릿 수정 -->
+	<update id="updateTemplate">
+		/* template.updateTemplate */
+		update shfda.tb_tpl
+		set tpl_ctg_num     = #{tplCtgNum}
+		  , tpl_msg_div_cd  = #{tplMsgDivCd}
+		  , cstm_que        = #{cstmQue}
+		  , reply_cont      = #{replyCont}
+		  , reply_cont_text = #{replyContText}
+		  , org_img_nm      = #{orgImgNm}
+		  , org_img_path    = #{orgImgPath}
+		  , org_pdf_nm      = #{orgPdfNm}
+		  , org_pdf_path    = #{orgPdfPath}
+		  , org_mime_type   = #{orgMimeType}
+		  , tpl_pdf_btn     = #{tplPdfBtn}
+		  , web_yn          = #{webYn}
+		  , android_yn      = #{androidYn}
+		  , iphone_yn       = #{iphoneYn}
+		  , top_mark_yn     = #{topMarkYn}
+		  , update_dt       = sysdate
+		  , updater         = #{sessionMemberUid}
+		  , permit_yn       = #{permitYn}
+		  <if test="tplCtgNum != null">
+		  	, depart_cd 	= (select depart_cd from shfda.tb_tpl_ctg where tpl_ctg_num = #{tplCtgNum} and rownum = 1)
+		  </if>
+		  <if test="tplDivCd != null">
+		  	, tpl_div_cd      = #{tplDivCd}
+		  </if>
+		where tpl_num = #{tplNum}
+	</update>
+
+	<!-- 템플릿 태그 저장 -->
+	<insert id="insertTplKwd">
+		/* template.insertTplKwd */
+		<selectKey keyProperty="tplKwdNum" order="BEFORE" resultType="String">
+			select shfda.seq_TPL_KWD_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_tpl_kwd
+		(
+		tpl_kwd_num
+		, tpl_num
+		, kwd_nm
+		, create_dt
+		, creater
+		)
+		values
+		(
+		#{tplKwdNum}
+		, #{tplNum}
+		, #{kwdNm}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+	<!-- 템플릿 태그 삭제 -->
+	<delete id="deleteTplKwd">
+		/* template.deleteTplKwd */
+		delete from shfda.tb_tpl_kwd
+		where tpl_num = #{tplNum}
+	</delete>
+
+	<!-- 템플릿 삭제 -->
+	<delete id="deleteTemplate">
+		/* template.deleteTemplate */
+		delete from shfda.tb_tpl
+		where tpl_num = #{tplNum}
+	</delete>
+
+	<!-- 템플릿 조회 -->
+	<select id="selectShareReq" resultType="CMap">
+		/* template.selectShareReq */
+		select *
+		from shfda.tb_tpl
+		where tpl_num = #{tplNum}
+		  and permit_yn = 'N'
+		  and rownum = 1
+	</select>
+
+	<!-- 템플릿 공유 정보 등록 -->
+	<update id="insertShareReq">
+		/* template.insertShareReq */
+		<selectKey keyProperty="shareReqNum" order="BEFORE" resultType="String">
+			select shfda.seq_SHARE_REQ_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_tpl_share_req
+		(
+		share_req_num
+		, tpl_num
+		, member_uid
+		, appr_member_uid
+		, review_yn
+		, appr_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		)
+		values
+		(
+		#{shareReqNum}
+		, #{tplNum}
+		, #{sessionMemberUid}
+		, ''
+		, 'N'
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</update>
+
+	<!-- 템플릿 공유 정보 수정 -->
+	<update id="updateShareReq">
+		/* template.updateShareReq */
+		update shfda.tb_tpl_share_req
+		set review_yn       = #{reviewYn}
+		  , appr_yn         = #{apprYn}
+		  , appr_member_uid = #{sessionMemberUid}
+		  , update_dt       = sysdate
+		  , updater         = #{sessionMemberUid}
+		where share_req_num = #{shareReqNum}
+	</update>
+
+	<!-- 템플릿 공유 정보 삭제 -->
+	<update id="deleteShareReq">
+		/* template.deleteShareReq */
+		delete from shfda.tb_tpl_share_req
+		where share_req_num = #{shareReqNum}
+	</update>
+
+	<!-- 템플릿 조회 -->
+	<select id="selectTemplate" resultMap="templateResult">
+		/* template.selectTemplate */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select a.tpl_num
+			 , a.tpl_num                          as tpl_num1
+			 , a.tpl_num                          as tpl_num2
+			 , a.tpl_ctg_num
+			 , a.tpl_div_cd
+			 , a.tpl_msg_div_cd
+			 , a.cstm_que
+			 , A.REPLY_CONT
+			 , a.reply_cont_text
+			 , a.org_img_nm
+			 , a.org_img_path
+			 , a.org_pdf_nm
+			 , a.org_pdf_path
+			 , a.org_mime_type
+			 , a.tpl_pdf_btn			 
+			 , a.member_uid
+			 , a.web_yn
+			 , a.android_yn
+			 , a.iphone_yn
+			 , a.top_mark_yn
+			 , to_char(a.create_dt, 'yyyy-mm-dd') as create_dt
+			 , a.creater
+			 , to_char(a.update_dt, 'yyyy-mm-dd') as update_dt
+			 , a.updater
+			 , permit_yn
+		from shfda.tb_tpl a
+				 /* left outer join shfda.tb_tpl_share_req b on (a.tpl_num = b.tpl_num and b.appr_yn = 'N') */
+		where a.tpl_num = #{tplNum}
+		  and rownum = 1
+	</select>
+
+</mapper>

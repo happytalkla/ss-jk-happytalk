@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AuthCode">
+
+	<select id="select" resultType="CMap">
+		/* AuthCode.select */
+		select *
+		from shfda.tb_auth
+		<where>
+			<if test="authId != null">
+			and auth_id = #{code}
+			</if>
+			<if test="cstmUid != null">
+			and cstm_uid = #{cstmUid}
+			</if>
+			<if test="cocId != null">
+			and coc_id = #{cocId}
+			</if>
+			<if test="chatRoomUid != null">
+			and chat_room_uid = #{chatRoomUid}
+			</if>
+			<if test="authType != null">
+			and auth_type = #{authType}
+			</if>
+			<if test="authPosition != null">
+			and auth_position = #{authPosition}
+			</if>
+			<if test="expiredMinutes != null">
+			and expire_dt &gt; sysdate
+			</if>
+		</where>
+	</select>
+
+	<update id="save">
+		/* AuthCode.save */
+		merge into shfda.tb_auth
+		using dual
+		on (auth_id = #{code})
+
+		when not matched then
+		insert
+		(
+			 auth_id
+			, chat_room_uid
+			, cstm_uid
+			, coc_id
+			, auth_type
+			, auth_position
+			, create_dt
+			, expire_dt
+		)
+		values
+		(
+			 shfda.seq_auth_id.nextval
+			, #{chatRoomUid}
+			, #{cstmUid}
+			, #{cocId}
+			, #{authType}
+			, #{authPosition}
+			, sysdate
+			, sysdate
+		)
+	
+		when matched then
+		update
+		set
+			expire_dt = sysdate
+			, coc_id = #{cocId}
+			, auth_type = #{authType}
+			, auth_position = #{authPosition}
+		where
+			auth_id = #{code}
+	</update>
+
+	<update id="delete">
+		/* AuthCode.delete */
+		delete from shfda.tb_auth
+		where
+			<if test="id != null">
+			auth_id = #{code}
+			</if>
+	</update>
+</mapper>

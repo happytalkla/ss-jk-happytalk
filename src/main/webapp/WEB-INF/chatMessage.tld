@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<taglib xmlns="http://java.sun.com/xml/ns/javaee"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-jsptaglibrary_2_1.xsd"
+		version="2.1">
+
+	<description>Chat Message library</description>
+	<display-name>Chat Message</display-name>
+	<tlib-version>2.1</tlib-version>
+	<short-name>chat</short-name>
+	<uri>https://happytalk.io/jsp/jstl/chat</uri>
+
+	<tag>
+		<name>message</name>
+		<tag-class>ht.tag.chat.MessageTag</tag-class>
+		<body-content>JSP</body-content>
+		<attribute>
+			<name>chatMessage</name>
+			<required>true</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+	</tag>
+
+	<tag>
+		<name>editButton</name>
+		<tag-class>ht.tag.chat.EditButtonTag</tag-class>
+		<body-content>JSP</body-content>
+		<attribute>
+			<name>chatMessage</name>
+			<required>true</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+	</tag>
+
+	<tag>
+		<name>template</name>
+		<tag-class>ht.tag.chat.TemplateTag</tag-class>
+		<body-content>JSP</body-content>
+		<attribute>
+			<name>jsonContents</name>
+			<required>true</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+	</tag>
+</taglib>

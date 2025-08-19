@@ -1,0 +1,64 @@
+.gradle
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.settings/
+.springBeans
+.externalToolBuilders/
+
+# intellij
+.idea
+.idea/
+.idea_modules/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans #
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# subversion
+.svn/
+
+# git
+.git/
+
+# build outputs
+bin/
+build/
+target/
+out/
+
+# play framework outputs
+logs/
+project/project/
+project/target/
+tmp/
+dist/
+.cache/
+
+# backup file
+*~
+
+# mac
+.DS_Store
+
+# windows
+Thumbs.db
+
+# node
+node_modules/
+/hs_err_pid83896.log
+/.sts4-cache/

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotSession">
+
+	<select id="select" resultType="BotSession">
+		/* BotSession.select */
+		select *
+		from shfda.tb_bot_session
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="context != null">
+			and code = #{context}
+			</if>
+			<if test="fallbackYn != null">
+			and fallback_yn = #{fallbackYn}
+			</if>
+			<if test="firstBlockId != null">
+			and first_block_id = #{firstBlockId}
+			</if>
+			<if test="lastGreenBlockId != null">
+			and last_green_block_id = #{lastGreenBlockId}
+			</if>
+			<if test="lastGreenConditionBlockId != null">
+			and last_green_condition_block_id = #{lastGreenConditionBlockId}
+			</if>									
+			<if test="prevGreenBlockId != null">
+			and prev_green_block_id = #{prevGreenBlockId}
+			</if>
+			<if test="scenarioId != null">
+			and scenario_id = #{scenarioId}
+			</if>
+			<if test="sessionType != null">
+			and session_type = #{sessionType}
+			</if>
+			<if test="simulationYn != null">
+			and simulation_yn = #{simulationYn}
+			</if>
+			<if test="triggerCode != null">
+			and trigger_code = #{triggerCode}
+			</if>																					
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+	
+	<insert id="insert">
+		/* BotSession.insert */
+		insert into shfda.tb_bot_session
+		(
+		    id,
+		    context,
+		    device_type,
+		    fallback_yn,
+		    first_block_id,
+		    last_green_block_id,
+		    last_green_condition_block_id,
+		    modified,
+		    prev_green_block_id,
+		    scenario_id,
+		    session_type,
+		    simulation_yn,
+		    trigger_code
+		)
+		values
+		(
+			#{id}
+			, #{context}
+			, #{deviceType}
+			, #{fallbackYn}
+			, #{firstBlockId}		
+			, #{lastGreenBlockId}
+			, #{lastGreenConditionBlockId}							
+			, sysdate
+			, #{prevGreenBlockId}
+			, #{scenarioId}
+			, #{sessionType}
+			, #{simulationYn}
+			, #{triggerCode}			
+		)
+	</insert>
+
+	<update id="save">
+		/* BotSession.save */
+		merge into shfda.tb_bot_session
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+		    id,
+		    context,
+		    device_type,
+		    fallback_yn,
+		    first_block_id,
+		    last_green_block_id,
+		    last_green_condition_block_id,
+		    modified,
+		    prev_green_block_id,
+		    scenario_id,
+		    session_type,
+		    simulation_yn,
+		    trigger_code
+		)
+		values
+		(
+			#{id}
+			, #{context}
+			, #{deviceType}
+			, #{fallbackYn}
+			, #{firstBlockId}		
+			, #{lastGreenBlockId}
+			, #{lastGreenConditionBlockId}							
+			, sysdate
+			, #{prevGreenBlockId}
+			, #{scenarioId}
+			, #{sessionType}
+			, #{simulationYn}
+			, #{triggerCode}			
+		)
+
+		when matched then
+		update
+		set
+		    context = #{context},
+		    device_type = #{deviceType},
+		    fallback_yn = #{fallbackYn},
+		    first_block_id = #{firstBlockId},
+		    last_green_block_id = #{lastGreenBlockId},
+		    last_green_condition_block_id = #{lastGreenConditionBlockId},
+		    modified = sysdate,
+		    prev_green_block_id = #{prevGreenBlockId},
+		    scenario_id = #{scenarioId},
+		    session_type = #{sessionType},
+		    simulation_yn = #{simulationYn},
+		    trigger_code = #{triggerCode}
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* BotSession.delete */
+		delete from shfda.tb_bot_session
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

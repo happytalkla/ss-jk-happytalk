@@ -1,0 +1,50 @@
+@charset "utf-8";
+
+/*
+  2020 삼성증권 챗봇서비스 리뉴얼
+  Reset css Style
+  Author : 유희정
+  Version : 1.0
+*/
+
+
+/* common */
+*{ padding: 0; margin: 0; box-sizing:border-box; -webkit-box-sizing:border-box; -moz-box-sizing:border-box; color:#000}
+html{-webkit-text-size-adjust:none; }
+html, body { height:100%; width:100%; line-height:160%; }
+caption, area, base, basefont, command, datalist, head, input[type=hidden], link, menu[type=context], meta, noembed, noframes,param, script, source, style, track, title, legend { display: none;}
+/*
+body, html, address, article, aside, blockquote, center, dir, div, figure, figcaption, form, hgroup, hr, legend, listing, menu, nav, ol, p, plaintext, pre, section, summary, ul, li,  xmp, dl, dt, dd { display: block; }
+*/
+abbr, article, aside, audio, bb, canvas, datagrid, datalist, details, dialog, eventsource, figure, footer, header, mark, menu, meter, nav, output, progress, section, time, video{display:block}
+html, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video, button, img, a,{font:inherit; border:0}
+ul, li, dl, dt, dd, ol{list-style:none}
+blockquote, q {quotes:none}
+em, i, address {font-style:normal}
+table { display: table; border-collapse: collapse; border-collapse:collapse;border-spacing:0; width: 100%; }
+img{vertical-align:middle; border:0}
+em, address, i { font-style: normal; }
+a {color:#666; text-decoration: none; cursor: pointer; }
+/* 
+a:hover { text-decoration: underline; }
+*/
+
+
+/* form */
+form {height:inherit; display:inline;}
+fieldset{vertical-align:top; border:0; }
+legend{display:none; visibility:hidden;}
+input {-webkit-appearance: none;-webkit-border-radius: 0; border:1px solid #e7e8e8 }
+input, select, textarea, button {font-size:inherit; font-family: inherit; line-height:inherit; vertical-align:middle;}
+button{cursor:pointer;}
+pre {white-space: pre-wrap;}
+label{vertical-align:middle; margin-right:4px; }
+input[type=submit]{background:none; border:0;}
+input::-ms-clear, input::-ms-reveal {display: none; width : 0; height: 0;}
+input::-webkit-search-decoration, input::-webkit-search-cancel-button, input::-webkit-search-results-button,input::-webkit-search-results-decoration { display: none; }
+
+
+
+
+
+

@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chatManage">
+
+	<resultMap id="chatRoomResult" type="CMap">
+		<result property="chat_room_uid" column="chat_room_uid"/>
+		<result property="chat_room_uid2" column="chat_room_uid2"/>
+		<result property="manager_uid" column="manager_uid"/>
+		<result property="member_uid" column="member_uid"/>
+		<result property="cstm_uid" column="cstm_uid"/>
+		<result property="room_title" column="room_title"/>
+		<result property="cnsr_div_cd" column="cnsr_div_cd"/>
+		<result property="cstm_os_div_cd" column="cstm_os_div_cd"/>
+		<result property="cstm_link_div_cd" column="cstm_link_div_cd"/>
+		<result property="chat_room_status_cd" column="chat_room_status_cd"/>
+		<result property="room_mark_num" column="room_mark_num"/>
+		<result property="room_create_dt" column="room_create_dt"/>
+		<result property="room_create_date" column="room_create_date"/>
+		<result property="room_create_datetime" column="room_create_datetime"/>
+		<result property="pass_time" column="pass_time"/>
+		<result property="cnsr_link_dt" column="cnsr_link_dt"/>
+		<result property="last_chat_num" column="last_chat_num"/>
+		<result property="last_chat_dt" column="last_chat_dt"/>
+		<result property="last_chat_date" column="last_chat_date"/>
+		<result property="end_yn" column="end_yn"/>
+		<result property="room_end_dt" column="room_end_dt"/>
+		<result property="end_div_cd" column="end_div_cd"/>
+		<result property="cstm_reply_delay_yn" column="cstm_reply_delay_yn"/>
+		<result property="sender_div_cd" column="sender_div_cd"/>
+		<result property="last_chat_cont" column="last_chat_cont" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="ctg_num" column="ctg_num"/>
+		<result property="bot_project_id" column="bot_project_id"/>
+		<result property="bot_session_key" column="bot_session_key"/>
+		<result property="counselor_nm" column="counselor_nm"/>
+		<result property="manager_nm" column="manager_nm"/>
+		<result property="cstm_nm" column="cstm_nm"/>
+		<result property="room_mark_class" column="room_mark_class"/>
+		<result property="mark_desc" column="mark_desc"/>
+<!--		<collection-->
+<!--				property="lastChatCont"-->
+<!--				column="{chatRoomUid=chat_room_uid2}"-->
+<!--				select="selectLastChatCont"-->
+<!--		/>-->
+	</resultMap>
+
+<!--	<resultMap id="contentsVO" type="ht.domain.ContentsVO">-->
+<!--		<result property="contents" column="contents" javaType="java.lang.String" jdbcType="CLOB"/>-->
+<!--	</resultMap>-->
+
+	<!-- 상담관리 - 상담 status별 목록 조회 -->
+	<select id="selectStatusRoomList" resultMap="chatRoomResult">
+		/* chatManage.selectStatusRoomList */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select t.*
+		from
+		(
+		select t.*, rownum as rnum
+		from
+		(
+			select t1.*
+			, (select max(t2.img_class_name) from shfda.tb_CHAT_PASS_TIME t2
+				where t2.use_yn = 'Y' and to_number(t1.pass_time) &gt;= to_number(t2.pass_time)) as pass_time_nm
+			from
+				(
+				/* 디버깅 쿼리 시작 */
+				select
+					a.chat_room_uid
+					, a.chat_room_uid as chat_room_uid2
+					, a.manager_uid
+					, a.member_uid
+					, a.cstm_uid
+					, a.coc_id as room_coc_id
+					, a.coc_nm as room_coc_nm
+					, a.room_title
+					, a.cnsr_div_cd
+					, a.cstm_os_div_cd
+					, a.cstm_link_div_cd
+					, a.chat_room_status_cd
+					, a.room_mark_num
+					, a.room_create_dt
+					, to_char(a.room_create_dt, 'yyyy/mm/dd hh24:mi') as room_create_date
+					, to_char(a.room_create_dt, 'yyyy/mm/dd am hh:mi') as room_create_datetime
+					, trunc((sysdate - a.room_create_dt) * 24 * 60, 0) as pass_time
+					, a.cnsr_link_dt
+					, a.last_chat_num
+					, a.last_chat_dt
+					, to_char(a.last_chat_dt, 'yyyy/mm/dd hh24:mi') as last_chat_date
+					, to_char(a.last_chat_dt, 'yyyy/mm/dd hh24:mi:ss') as last_chat_datetime
+					, a.end_yn
+					, a.room_end_dt
+					, a.end_div_cd
+					, a.cstm_reply_delay_yn
+					, a.sender_div_cd
+					, a.last_chat_cont
+					, a.ctg_num
+					, a.bot_project_id
+					, a.bot_session_key
+					, d.name as counselor_nm
+					, e.name as manager_nm
+					, nvl(a.coc_nm, '익명') as cstm_nm
+					, i.img_class_name as room_mark_class
+					, i.mark_desc as mark_desc
+					, count(a.chat_room_uid) over() as tot_count
+					, g.chng_req_num
+					, h.review_req_num
+					, m.img_class_name as grade_class_name
+					, m.grade_nm
+					, m.grade_desc
+					, c.grade_memo
+					, c.name
+					, nvl2(end.dep_2_ctg_cd, 'Y', 'N') as end_info_yn
+				from shfda.tb_chat_room a
+				inner join (
+					select distinct a.chat_room_uid
+					from shfda.tb_chat_room a
+					inner join shfda.tb_chat b on (a.chat_room_uid = b.chat_room_uid)
+					inner join shfda.tb_chat_cstm_info c on (a.cstm_uid = c.cstm_uid)
+					left outer join shfda.tb_member_info d on (a.member_uid = d.member_uid)
+					left outer join shfda.tb_member_info e on (d.upper_member_uid = e.member_uid)
+					left outer join shfda.tb_chat_end_info f on (a.chat_room_uid = f.chat_room_uid)
+					left outer join shfda.tb_chat_cnsr_chng_req g on (a.chat_room_uid = g.chat_room_uid and g.appr_yn = 'N')
+					left outer join shfda.tb_chat_cont_review h on (a.chat_room_uid = h.chat_room_uid and h.comp_yn = 'N')
+					left outer join shfda.tb_room_mark i on (a.room_mark_num = i.room_mark_num and i.del_yn = 'N')
+
+					where
+						1 = 1
+						and a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+						/* 조건 시작 */
+						<!--
+						<if test="managerUid != null">
+						and a.manager_uid = #{managerUid}
+						</if>
+						-->
+						/* 기간 및 날짜 조건 */
+						<choose>
+							<when test="schDate != null and schDate != ''.toString() ">
+							/* 날짜 선택 */
+							and a.room_create_dt between to_date(#{schDate}, 'yyyy-mm-dd') and to_date(#{schDate}, 'yyyy-mm-dd') + 1 - 0.00001
+							</when>
+							<otherwise>
+								<choose>
+									<when test="schTerm != null and schTerm == 'toDay'.toString()">
+									/* 오늘 */
+									<choose>
+									<when test="'botEnd'.toString() == schRoomStatus or 'cnsrEnd'.toString() == schRoomStatus">
+										<if test="dateSrch == null">
+									and a.room_create_dt &gt; trunc(sysdate)
+										</if>
+									</when>
+									<otherwise>
+										<if test="dateSrch == null">
+									and a.room_create_dt &gt; trunc(sysdate - 1)
+										</if>
+									</otherwise>
+									</choose>
+									</when>
+									<when test="schTerm != null and schTerm == 'yestDay'.toString()">
+									/* 어제 */
+									and a.room_create_dt between trunc(sysdate - 1)
+										and trunc(sysdate) - 0.00001
+									</when>
+									<when test="schTerm != null and schTerm == 'oneWeek'.toString()">
+									/* 1주일 */
+									and a.room_create_dt between trunc(sysdate - 6)
+										and trunc(sysdate + 1) - 0.00001
+									</when>
+									<when test="schTerm != null and schTerm == 'thisMonth'.toString()">
+									/* 이번달 */
+									and a.room_create_dt between trunc(sysdate, 'month')
+										and trunc(add_months(sysdate, 1), 'month') - 0.00001
+									</when>
+									<when test="schTerm != null and schTerm == 'oneMonthAgo'.toString()">
+									/* 1달전 */
+									and a.room_create_dt between trunc(add_months(sysdate, -1), 'month')
+										and trunc(sysdate, 'month') - 0.00001
+									</when>
+									<when test="schTerm != null and schTerm == 'twoMonthAgo'.toString()">
+									/* 2달전 */
+									and a.room_create_dt between trunc(add_months(sysdate, -2), 'month')
+										and trunc(add_months(sysdate, -1), 'month') - 0.00001
+									</when>
+									<otherwise>
+									/* 기본 (오늘) */
+										<choose>
+										<when test="'botEnd'.toString() == schRoomStatus or 'cnsrEnd'.toString() == schRoomStatus">
+										<if test="dateSrch == null">
+									and a.room_create_dt &gt; trunc(sysdate) /* 기본 (오늘) */
+										</if>
+										</when>
+										<otherwise>
+										<if test="dateSrch == null">
+									and a.room_create_dt &gt; trunc(sysdate - 1) /* 기본 (어제) */
+										</if>
+										</otherwise>
+										</choose>
+									</otherwise>
+								</choose>
+							</otherwise>
+						</choose>
+
+						/* 텍스트 검색 조건 */
+						<if test="schText != null and schText != ''.toString()">
+						<choose>
+						<when test="schType != null and schType == 'cont'.toString()">
+							/* 상담내용 */
+							and DBMS_LOB.INSTR(b.cont_text, #{schText}) > 0
+						</when>
+						<when test="schType != null and schType == 'title'.toString()">
+							/* 제목 */
+							and instr(a.room_title, #{schText}, 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'roomId'.toString()">
+							/* 채팅방 아이디 */
+							and a.chat_room_uid = #{schText}
+						</when>
+						<when test="schType != null and schType == 'counselor'.toString()">
+							/* 상담원 이이디, 상담원 이름 */
+							and (d.member_uid = #{schText} or instr(d.name, #{schText}, 1, 1) > 0)
+						</when>
+						<when test="schType != null and schType == 'cstmId'.toString()">
+							/* 고객 UUID, 고객 COC_ID */
+							and (instr(c.cstm_uid, #{schText}, 1, 1) > 0 or instr(a.coc_id, #{schText}, 1, 1) > 0)
+						</when>
+						<when test="schType != null and schType == 'cstmName'.toString()">
+							/* 고객 COC_NM */
+							and instr(a.coc_nm, #{schText}, 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'endDate'.toString()">
+							/* 채팅방 종료 일자 */
+							and a.room_end_dt between to_date(#{schText}) and to_date(#{schText}) + 1 - 0.00001
+						</when>
+						</choose>
+						</if>
+				) b on (a.chat_room_uid = b.chat_room_uid)
+				inner join shfda.tb_chat_cstm_info c on (a.cstm_uid = c.cstm_uid)
+				left outer join shfda.tb_member_info d on (a.member_uid = d.member_uid)
+				left outer join shfda.tb_member_info e on (d.upper_member_uid = e.member_uid)
+				left outer join shfda.tb_room_mark i on (a.room_mark_num = i.room_mark_num and i.del_yn = 'N')
+				left outer join shfda.tb_chat_cnsr_chng_req g
+				on (a.chat_room_uid = g.chat_room_uid
+					and g.appr_yn = 'N'
+					<if test="schRoomStatus != null and schRoomStatus != 'cnsrChange'.toString() and schRoomStatus != 'managerChange'.toString() and schRoomStatus != 'cstmGrade'.toString()">
+					and g.req_type='CHANGE_COUNSELOR'
+					</if>)
+				left outer join shfda.tb_chat_cont_review h on (a.chat_room_uid = h.chat_room_uid and h.comp_yn = 'N')
+				left outer join shfda.tb_cstm_grade m on (c.grade_num = m.grade_num and m.del_yn = 'N')
+				left outer join shfda.tb_chat_end_info end on (a.chat_room_uid = end.chat_room_uid)
+
+				where
+					1=1
+
+				/* 상태별 조건 */
+				<choose>
+				<when test="schRoomStatus != null and schRoomStatus == 'botIng'.toString()">
+					/* 봇상담 */
+					and a.chat_room_status_cd = '11'
+					and a.member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'botEnd'.toString()">
+					/* 봇상담 종료 */
+					and a.chat_room_status_cd = '91'
+					and a.member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cnsrWait'.toString()">
+					/* 상담원 배정 대기 */
+					and a.chat_room_status_cd = '31'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cnstNotJoin'.toString()">
+					/* 읽지않은 대화방 */
+					and a.chat_room_status_cd = '41'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cstmIng'.toString()">
+					/* 진행중 */
+					and a.chat_room_status_cd = '51'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cnsrIng'.toString()">
+					/* 진행중 */
+					and a.chat_room_status_cd = '61'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cnsrEnd'.toString()">
+					/* 상담종료 */
+					/* END_DIV_CD 조건 변경 ('C_CNSR', 'C_CSTM_WAIT_CNSR', 'NORMAL', 'C_TIME') */
+					and a.chat_room_status_cd = '91'
+					and a.cnsr_div_cd = 'C'
+					AND a.END_DIV_CD IN ('C_CNSR','C_CSTM_WAIT_CNSR','C_CSTM_ASSIGN_CNSR','C_TIME', 'C_CSTM') 
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cnsrChange'.toString()">
+					/* 상담원 변경요청 */
+					and g.req_type='CHANGE_COUNSELOR'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'managerChange'.toString()">
+					/* 매니저 상담요청  */
+					and g.req_type='MANAGER_COUNSEL'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>			
+				<when test="schRoomStatus != null and schRoomStatus == 'contReview'.toString()">
+					/* 상담내용 검토요청 */
+					and h.review_req_num is not null
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				<when test="schRoomStatus != null and schRoomStatus == 'cstmGrade'.toString()">
+					/* 코끼리 등록 요청 */
+					and g.req_type='ASSIGN_CUSTOMER_GRADE'
+					<if test="departCd != null">
+					and a.depart_cd = #{departCd}
+					</if>
+					<if test="managerUid != null">
+					and a.manager_uid = #{managerUid}
+					</if>
+				</when>
+				</choose>
+				/* 디버깅 쿼리 끝 */
+				) t1
+
+			<!-- 정렬 기준 -->
+			order by
+			<choose>
+				<when test="schSortColumn != null and schSortColumn == 'lastChat'.toString()">
+					t1.last_chat_dt
+					<choose>
+						<when test="schSortType != null and schSortType == 'desc'.toString()">
+							asc
+						</when>
+						<otherwise>
+							desc
+						</otherwise>
+					</choose>
+					, t1.room_create_dt asc
+				</when>
+				<when test="schSortColumn != null and schSortColumn == 'name'.toString()">
+					t1.cstm_nm
+					<choose>
+						<when test="schSortType != null and schSortType == 'desc'.toString()">
+							desc
+						</when>
+						<otherwise>
+							asc
+						</otherwise>
+					</choose>
+					, t1.room_create_dt asc
+				</when>
+				<when test="schSortColumn != null and schSortColumn == 'title'.toString()">
+					t1.room_title
+					<choose>
+						<when test="schSortType != null and schSortType == 'desc'.toString()">
+							desc
+						</when>
+						<otherwise>
+							asc
+						</otherwise>
+					</choose>
+					, t1.room_create_dt asc
+				</when>
+				<when test="schSortColumn != null and schSortColumn == 'chatTime'.toString()">
+					t1.cnsr_link_dt
+					<choose>
+						<when test="schSortType != null and schSortType == 'desc'.toString()">
+							asc
+						</when>
+						<otherwise>
+							desc
+						</otherwise>
+					</choose>
+					, t1.chat_room_uid asc
+				</when>
+				<when test="schSortColumn != null and schSortColumn == 'createTime'.toString()">
+					t1.room_create_dt
+					<choose>
+						<when test="schSortType != null and schSortType == 'desc'.toString()">
+							asc
+						</when>
+						<otherwise>
+							desc
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					t1.last_chat_dt
+				</otherwise>
+			</choose>
+		, t1.chat_room_uid asc
+		) t
+		) t
+		where t.rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+
+	</select>
+
+<!--	<select id="selectLastChatCont" resultMap="contentsVO">-->
+<!--		/* chatManage.selectLastChatCont */-->
+<!--		select last_chat_cont as contents-->
+<!--		from shfda.tb_chat_room-->
+<!--		where chat_room_uid = #{chatRoomUid}-->
+<!--	</select>-->
+
+	<!-- 상담이력 -->
+	<select id="selectCnsHisListBak" resultType="CMap">
+		/* chatManage.selectCnsHisList */
+		select
+			t.*,
+			rownum as rnum
+		from (
+			 select
+			 	cstm.cstm_uid,
+				cstm.name as cstm_name,
+				room.coc_id as room_coc_id,
+				room.coc_nm as room_coc_nm,
+				room.chat_room_uid,
+				room.cstm_link_div_cd,
+				shfda.fn_getcodenm('CSTM_LINK_DIV_CD', room.cstm_link_div_cd) as cstm_link_div_nm,
+				room.chat_room_status_cd,
+				shfda.fn_getcodenm('CHAT_ROOM_STATUS_CD', room.chat_room_status_cd) as chat_room_status_nm,
+				to_char(room.room_create_dt, 'yyyy-mm-dd hh24:mi:ss') as room_create_dt,
+
+				member.name,
+
+				case when cate3.ctg_num is null then
+					decode(set.ctg_mgt_dpt, '2', cate2.ctg_nm, cate3.ctg_nm)
+				else
+					decode(set.ctg_mgt_dpt, '2', cate3.ctg_nm, cate1.ctg_nm)
+				end	as ctg_nm_1,
+
+				case when cate3.ctg_num is null then
+					decode(set.ctg_mgt_dpt, '2', cate1.ctg_nm, cate2.ctg_nm)
+				else
+					decode(set.ctg_mgt_dpt, '2', cate2.ctg_nm, cate3.ctg_nm)
+				end	as ctg_nm_2,
+
+				case when cate3.ctg_num is null then 
+					null
+				else
+					decode(set.ctg_mgt_dpt, '2', cate1.ctg_nm, cate2.ctg_nm)
+				end	as ctg_nm_3,
+
+				end.memo,
+				end.dep_1_ctg_cd,
+				end.dep_1_ctg_nm,
+				end.dep_2_ctg_cd,
+				end.dep_2_ctg_nm,
+				end.dep_3_ctg_cd,
+				end.dep_3_ctg_nm
+
+			from shfda.tb_chat_room room
+
+			left outer join shfda.tb_member_info member
+			on room.member_uid = member.member_uid
+
+			left outer join shfda.tb_chat_end_info end
+			on room.chat_room_uid = end.chat_room_uid
+
+			left outer join shfda.tb_ctg_info cate1
+			on room.ctg_num = cate1.ctg_num
+
+			left outer join shfda.tb_ctg_info cate2
+			on cate1.upper_ctg_num = cate2.ctg_num
+
+			left outer join shfda.tb_ctg_info cate3
+			on cate2.upper_ctg_num = cate3.ctg_num
+
+			left outer join shfda.tb_chat_cstm_info cstm
+			on room.cstm_uid = cstm.cstm_uid
+
+			inner join shfda.tb_set set
+			on 1 = 1
+
+			where
+				<if test="cstmCocId != null">
+				room.coc_id = #{cstmCocId}
+				</if>
+				<if test="cstmUid != null">
+				room.cstm_uid = #{cstmUid}
+				</if>
+
+			order by room.room_create_dt desc
+		) t
+	</select>
+
+	<!-- 상담이력 -->
+	<select id="selectCnsHisList" resultType="CMap">
+		/* chatManage.selectCnsHisList */
+		select
+			room.chat_room_uid,
+			room.cstm_link_div_cd,
+			shfda.fn_getcodenm('CSTM_LINK_DIV_CD', room.cstm_link_div_cd) as cstm_link_div_nm,
+			room.chat_room_status_cd,
+			shfda.fn_getcodenm('CHAT_ROOM_STATUS_CD', room.chat_room_status_cd) as chat_room_status_nm,
+			to_char(room.room_create_dt, 'yyyy-mm-dd hh24:mi:ss') as room_create_dt,
+
+			member.name,
+
+			case when cate3.ctg_num is null then
+				decode(setting.ctg_mgt_dpt, '2', cate2.ctg_nm, cate3.ctg_nm)
+			else
+				decode(setting.ctg_mgt_dpt, '2', cate3.ctg_nm, cate1.ctg_nm)
+			end	as ctg_nm_1,
+
+			case when cate3.ctg_num is null then
+				decode(setting.ctg_mgt_dpt, '2', cate1.ctg_nm, cate2.ctg_nm)
+			else
+				decode(setting.ctg_mgt_dpt, '2', cate2.ctg_nm, cate3.ctg_nm)
+			end	as ctg_nm_2,
+
+			case when cate3.ctg_num is null then 
+				null
+			else
+				decode(setting.ctg_mgt_dpt, '2', cate1.ctg_nm, cate2.ctg_nm)
+			end	as ctg_nm_3,
+
+			end.memo,
+			end.dep_1_ctg_cd,
+			end.dep_1_ctg_nm,
+			end.dep_2_ctg_cd,
+			end.dep_2_ctg_nm,
+			end.dep_3_ctg_cd,
+			end.dep_3_ctg_nm
+
+		from (
+			select *
+			from shfda.tb_chat_room
+			where
+				<if test="roomCocId != null">
+				coc_id = #{roomCocId}
+				</if>
+				<if test="cstmUid != null">
+				cstm_uid = #{cstmUid}
+				</if>
+			order by room_create_dt desc
+		) room
+
+		left outer join shfda.tb_member_info member
+		on room.member_uid = member.member_uid
+
+		left outer join shfda.tb_chat_end_info end
+		on room.chat_room_uid = end.chat_room_uid
+
+		left outer join shfda.tb_ctg_info cate1
+		on room.ctg_num = cate1.ctg_num
+
+		left outer join shfda.tb_ctg_info cate2
+		on cate1.upper_ctg_num = cate2.ctg_num
+
+		left outer join shfda.tb_ctg_info cate3
+		on cate2.upper_ctg_num = cate3.ctg_num
+
+		left outer join shfda.tb_chat_cstm_info cstm
+		on room.cstm_uid = cstm.cstm_uid
+
+		inner join shfda.tb_set setting
+		on 1 = 1
+
+		ORDER BY room.room_create_dt desc
+	</select>
+
+	<!-- 지식화 관리 목록 - 프로젝트 목록 -->
+	<select id="selectProjectList" resultType="CMap">
+		/* chatManage.selectProjectList */
+		select bot_project_id
+			 , bot_project_nm
+			 , del_yn
+		from shfda.tb_know_project
+		where del_yn = 'N'
+		order by bot_project_nm asc
+	</select>
+
+	<!-- 지식화 관리 목록 -->
+	<select id="selectKnowList" resultType="CMap">
+		/* chatManage.selectKnowList */
+		select *
+		from
+		(
+		select a.know_num
+		, a.bot_project_id
+		, b.bot_project_nm
+		, a.cstm_que
+		, a.reply_cont_text
+		, a.member_uid
+		, a.know_reg_yn
+		, a.del_yn
+		, to_char(a.create_dt, 'yyyy-mm-dd') as create_dt
+		, a.creater
+		, to_char(a.update_dt, 'yyyy-mm-dd') as update_dt
+		, a.updater
+		, row_number() over(order by to_number(a.know_num) desc) as rnum
+		from shfda.tb_know_mgt a
+		inner join shfda.tb_know_project b on (a.bot_project_id = b.bot_project_id)
+		where a.del_yn = 'N'
+		and a.member_uid = #{sessionMemberUid}
+		<if test="schText != null and schText != ''.toString()">
+			<choose>
+				<when test="schType != null and schType == 'QUESTION'.toString()">
+					and instr(a.cstm_que, #{schText}, 1, 1) > 0
+				</when>
+				<when test="schType != null and schType == 'ANSWER'.toString()">
+					and instr(a.reply_cont_text, #{schText}, 1, 1) > 0
+				</when>
+			</choose>
+		</if>
+		)
+		where rnum between (#{nowPage}-1)*#{pageCount} + 1 and #{nowPage}*#{pageCount}
+	</select>
+
+	<!-- 지식화 관리 조회 -->
+	<select id="selectKnowledge" resultType="CMap">
+		/* chatManage.selectKnowledge */
+		select a.know_num
+			 , a.bot_project_id
+			 , b.bot_project_nm
+			 , a.cstm_que
+			 , a.reply_cont_text
+			 , a.member_uid
+			 , a.know_reg_yn
+			 , a.del_yn
+			 , to_char(a.create_dt, 'yyyy-mm-dd') as create_dt
+			 , a.creater
+			 , to_char(a.update_dt, 'yyyy-mm-dd') as update_dt
+			 , a.updater
+		from shfda.tb_know_mgt a
+				 inner join shfda.tb_know_project b on (a.bot_project_id = b.bot_project_id)
+		where a.del_yn = 'N'
+		  and a.member_uid = #{sessionMemberUid}
+		  and know_num = #{knowNum}
+	</select>
+
+	<!-- 지식화 관리 등록 -->
+	<insert id="insertKnowMgt">
+		/* chatManage.insertKnowMgt */
+		<selectKey keyProperty="knowNum" order="BEFORE" resultType="String">
+			select shfda.seq_KNOW_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_know_mgt
+		(
+		know_num
+		, bot_project_id
+		, cstm_que
+		, reply_cont_text
+		, member_uid
+		, know_reg_yn
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		)
+		values
+		(
+		#{knowNum}
+		, #{botProjectId}
+		, #{cstmQue}
+		, #{replyContText}
+		, #{sessionMemberUid}
+		, 'N'
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+	<!-- 지식화 관리 수정 -->
+	<update id="updateKnowMgt">
+		/* chatManage.updateKnowMgt */
+		update shfda.tb_know_mgt
+		set bot_project_id  = #{botProjectId}
+		  , cstm_que        = #{cstmQue}
+		  , reply_cont_text = #{replyContText}
+		  , update_dt       = sysdate
+		  , updater         = #{sessionMemberUid}
+		where know_num = #{knowNum}
+	</update>
+
+	<!-- 지식화 관리 삭제 -->
+	<update id="deleteKnowMgt">
+		/* chatManage.deleteKnowMgt */
+		update shfda.tb_know_mgt
+		set del_yn    = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where know_num = #{knowNum}
+	</update>
+
+</mapper>

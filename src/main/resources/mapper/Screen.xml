@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="screen">
+
+	<!-- 용어사전 목록 조회 -->
+	<select id="selectScreenList" resultType="CMap">
+		/* screen.selectScreenList */
+		select *
+		from
+		shfda.tb_o2_app
+		where 1=1
+			<if test="screenName != null and screenName != ''">
+				and screen_name like '%' || #{screenName} || '%'
+			</if>
+			<if test="screenNum != null and screenNum != ''">
+				and screen_num like '%' || #{screenNum} || '%'
+			</if>
+		order by screen_num asc
+	</select>
+
+
+	<!--  용어사전 상세 조회 -->
+	<select id="selectScreenDetail" resultType="CMap">
+		/* screen.selectScreenDetail */
+		select
+			*
+		from
+		shfda.tb_o2_app
+		where screen_num = #{screenNum}
+	</select>
+
+	<update id="deleteScreen">
+		/* screen.deleteScreen */
+		delete from shfda.tb_o2_app
+		where screen_num = #{screenNum}
+	</update>
+
+	<insert id="insertScreen">
+		/* screen.insertScreen */
+		insert into shfda.tb_o2_app
+		(
+		screen_num
+		, screen_id
+		, screen_name
+		)
+		values
+		(
+		#{screenNum}
+		, #{screenId}
+		, #{screenName}
+		)
+	</insert>
+
+	<update id="updateScreen">
+		/* screen.updateScreen */
+		update shfda.tb_o2_app
+		set screen_name         = #{screenName}
+		  , screen_id          = #{screenId}
+		where screen_num = #{screenNum}
+	</update>
+</mapper>

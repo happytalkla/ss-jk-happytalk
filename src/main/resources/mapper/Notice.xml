@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="notice">
+
+	<resultMap id="noticeResult" type="ht.domain.NoticeVO">
+		<result property="noticeNum" column="notice_num"/>
+		<result property="noticeDivCd" column="notice_div_cd"/>
+		<result property="noticeDivNm" column="notice_div_nm"/>
+		<result property="title" column="title"/>
+		<result property="cont" column="cont" javaType="java.lang.String" jdbcType="CLOB"/>
+		<result property="memberUid" column="member_uid"/>
+		<result property="regDt" column="reg_dt"/>
+		<result property="delYn" column="del_yn"/>
+	</resultMap>
+
+	<resultMap id="noticeListResult" type="CMap">
+		<result property="notice_num" column="notice_num"/>
+		<result property="notice_div_nm" column="notice_div_nm"/>
+		<result property="title" column="title"/>
+		<result property="cont" column="cont" javaType="java.lang.String" jdbcType="CLOB"/>
+		<result property="member_uid" column="member_uid"/>
+		<result property="member_name" column="member_name"/>
+		<result property="reg_dt" column="reg_dt"/>
+		<result property="del_yn" column="del_yn"/>
+		<result property="create_dt" column="create_dt"/>
+		<result property="creater" column="creater"/>
+		<result property="update_dt" column="update_dt"/>
+		<result property="updater" column="updater"/>
+		<result property="tot_count" column="tot_count"/>
+		<result property="rnum" column="rnum"/>
+	</resultMap>
+
+
+	<!-- 공지사항 목록 조회 -->
+	<select id="selectNoticeList" resultMap="noticeListResult">
+		/* notice.selectNoticeList */
+		select *
+		from
+		(
+			select
+				a.notice_num
+				, c.cd_nm as notice_div_nm
+				, a.title
+				, a.cont
+				, a.member_uid
+				, b.name as member_name
+				, to_char(a.reg_dt,'yyyy-mm-dd hh24:mi:ss') as reg_dt
+				, a.del_yn as del_yn
+				, a.create_dt as create_dt
+				, a.creater
+				, a.update_dt as update_dt
+				, a.updater
+				, count(1) over() as tot_count
+				, row_number() over(order by a.reg_dt desc) as rnum
+			from
+				shfda.tb_notice a
+				, shfda.tb_member_info b
+				, shfda.tb_cd c
+			where
+				a.member_uid = b.member_uid
+				and a.notice_div_cd = c.cd
+				and c.cd_group = 'NOTICE_DIV_CD'
+				and a.del_yn = 'N'
+				<if test="memberDivCd == 'C'.toString()">
+				and (a.notice_div_cd = 'A' or (a.notice_div_cd='C' and a.member_uid = #{upperMemberUid}))
+				</if>
+				<if test="memberDivCd == 'M'.toString()">
+				and (a.notice_div_cd in('A','B') or (a.notice_div_cd='C' and a.member_uid = #{sessionMemberUid}))
+				</if>
+				<if test="noticeDivCd != null and noticeDivCd != 'ALL'.toString()">
+				and a.notice_div_cd = #{noticeDivCd}
+				</if>
+				<if test="searchVal != null">
+				and instr(a.title, #{searchVal}, 1, 1) > 0
+				</if>
+			order by a.reg_dt desc
+		) t
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+	</select>
+
+	<!-- 공지사항 목록 조회 -->
+	<select id="selectNoticeDivList" resultType="CMap">
+		/* notice.selectNoticeDivList */
+		SELECT CD
+			 , CD_NM
+			 , SIM_NM
+		FROM shfda.tb_CD
+		WHERE 1 = 1
+		  AND CD_GROUP = #{CD_GROUP}
+		  AND USE_YN = 'Y'
+		ORDER BY SEQ ASC
+	</select>
+
+	<!-- 공지사항 상세 조회 -->
+	<select id="selectNoticeDetail" resultMap="noticeResult">
+		/* notice.selectNoticeDetail */
+		select
+		a.notice_num
+		, a.notice_div_cd
+		, case
+		when a.notice_div_cd = 'A' then '전체'
+		when a.notice_div_cd = 'B' then '메니져'
+		when a.notice_div_cd = 'C' then '상담원'
+		end as notice_div_nm
+		, a.title
+		, a.cont
+		, a.member_uid
+		, b.name as member_name
+		, to_char(a.reg_dt,'yyyy-mm-dd hh24:mi:ss') as reg_dt
+		, a.del_yn as del_yn
+		, a.create_dt as create_dt
+		, a.creater
+		, a.update_dt as update_dt
+		, a.updater
+		from
+		shfda.tb_notice a,
+		shfda.tb_member_info b
+		where
+		a.member_uid = b.member_uid
+		<if test="notice_num != null">
+			and a.notice_num = #{notice_num}
+		</if>
+	</select>
+
+	<update id="deleteNotice">
+		/* notice.deleteNotice */
+		update shfda.tb_notice
+		set del_yn    = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where notice_num = #{notice_num}
+	</update>
+
+	<insert id="insertNotice">
+		/* notice.insertNotice */
+		<selectKey keyProperty="noticeNum" order="BEFORE" resultType="String">
+			select shfda.seq_NOTICE_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_notice
+		(
+		notice_num
+		, notice_div_cd
+		, title
+		, cont
+		, member_uid
+		, reg_dt
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		)
+		values
+		(
+		#{noticeNum}
+		, #{noticeDivVal}
+		, #{title}
+		, #{cont}
+		, #{sessionMemberUid}
+		, sysdate
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+	<update id="updateNotice">
+		/* notice.updateNotice */
+		update shfda.tb_notice
+		set title         = #{title}
+		  , cont          = #{cont}
+		  , notice_div_cd = #{noticeDivVal}
+		  , update_dt     = sysdate
+		  , updater       = #{sessionMemberUid}
+		where notice_num = #{notice_num}
+	</update>
+
+
+</mapper>

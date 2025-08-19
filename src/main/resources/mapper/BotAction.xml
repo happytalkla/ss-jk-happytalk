@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotAction">
+
+	<select id="select" resultType="BotAction">
+		/* BotAction.select */
+		select *
+		from shfda.tb_bot_action
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="balloonNum != null">
+			and balloon_num = #{balloonNum}
+			</if>
+			<if test="blockId != null">
+			and block_id = #{blockId}
+			</if>
+			<if test="childBlockId != null">
+			and child_block_id = #{childBlockId}
+			</if>
+			<if test="data != null">
+			and data = #{data}
+			</if>
+			<if test="deviceType != null">
+			and device_type = #{deviceType}
+			</if>
+			<if test="extra != null">
+			and extra = #{extra}
+			</if>
+			<if test="keyword != null">
+			and keyword = #{keyword}
+			</if>
+			<if test="name != null">
+			and name = #{name}
+			</if>
+			<if test="num != null">
+			and num = #{num}
+			</if>				
+			<if test="scenarioId != null">
+			and scenario_id = #{scenarioId}
+			</if>
+			<if test="type != null">
+			and type = #{type}
+			</if>
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+	
+	<insert id="insert">
+		/* BotAction.insert */
+		insert into shfda.tb_bot_action
+		(
+		    id,
+		    balloon_num,
+		    block_id,
+		    child_block_id,
+		    data,
+		    device_type,
+		    extra,
+		    keyword,
+		    modified,
+		    modifier,
+		    name,
+		    num,
+		    scenario_id,
+		    sort,
+		    type
+		)
+		values
+		(
+			  #{id}
+			, #{balloonNum}
+			, #{blockId}
+			, #{childBlockId}
+			, #{data}
+			, #{deviceType}
+			, #{extra}
+			, #{keyword}
+			, sysdate
+			, 1
+			, #{name}
+			, #{num}
+			, #{scenarioId}
+			, #{sort}
+			, #{type}
+		)
+	</insert>
+	
+	<update id="save">
+		/* BotAction.save */
+		merge into shfda.tb_bot_action
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+		    id,
+		    balloon_num,
+		    block_id,
+		    child_block_id,
+		    data,
+		    device_type,
+		    extra,
+		    keyword,
+		    modified,
+		    modifier,
+		    name,
+		    num,
+		    scenario_id,
+		    sort,
+		    type
+		)
+		values
+		(
+			 shfda.seq_bot_action.nextval
+			, #{balloonNum}
+			, #{blockId}
+			, #{childBlockId}
+			, #{data}
+			, #{deviceType}
+			, #{extra}
+			, #{keyword}
+			, sysdate
+			, 1
+			, #{name}
+			, #{num}
+			, #{scenarioId}
+			, #{sort}
+			, #{type}
+		)
+
+		when matched then
+		update
+		set
+		    balloon_num = #{balloonNum},
+		    block_id = #{blockId},
+		    child_block_id = #{childBlockId},
+		    data = #{data},
+		    device_type = #{deviceType},
+		    extra = #{extra},
+		    keyword = #{keyword},
+		    modified = sysdate,
+		    modifier = 1,
+		    name = #{name},
+		    num = #{num},
+		    scenario_id = #{scenarioId},
+		    sort = #{sort},
+		    type = #{type}
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* BotAction.delete */
+		delete from shfda.tb_bot_action
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

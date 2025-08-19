@@ -1,0 +1,1552 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="member">
+
+	<!-- selectUserInfoForLogin -->
+	<select id="selectUserInfoForLogin" resultType="CMap">
+		/* member.selectUserInfoForLogin */
+		select a.*
+			, decode(a.MEMBER_GROUP_DIV_CD, null, 'N') as MEMBER_GROUP_DIV_CD
+			, to_char(a.prev_login_dt, 'yyyy-mm-dd hh24:mi:ss') as prev_login_date
+			, shfda.fn_GETCODENM('MEMBER_DIV_CD', a.member_div_cd) as member_div_nm
+			, b.name as upper_member_nm
+		from shfda.tb_member_info a
+				 left outer join shfda.tb_member_info b on (a.upper_member_uid = b.member_uid)
+		where a.coc_id = #{userId}
+		  and a.pwd = #{pwd}	
+		  and a.leave_yn = 'N'
+		  and a.valid_yn = 'Y'
+	</select>
+
+	<!-- 회원 목록 조회 -->
+	<select id="selectMemberList" resultType="CMap">
+		/* member.selectMemberList */
+		select t.*
+		from
+			(
+				select
+				a.member_uid
+				, a.id
+				, a.name
+				, a.pwd
+				, a.pwd_chng_dt
+				, a.email
+				, a.tel
+				, a.member_img_url
+				, a.member_div_cd
+				, shfda.fn_getCodeNm('MEMBER_DIV_CD', a.member_div_cd) as member_div_nm
+				, a.upper_member_uid
+				, a.coc_id
+				, a.cns_possible_yn
+				, a.leave_yn
+				, a.valid_yn
+				, to_char(a.create_dt, 'yyyy-mm-dd hh24:mi:ss') as create_dt
+				, a.creater
+				, to_char(a.update_dt, 'yyyy-mm-dd hh24:mi:ss') as update_dt
+				, a.updater
+				, nvl(b.name, '-') as manager_nm
+				, a.depart_cd
+				, shfda.fn_getCodeNm('DEPART_CD', a.depart_cd) as depart_nm
+				, count(a.member_uid) over() as tot_count
+				, case when a.MEMBER_GROUP_DIV_CD = 'Y' then '(*)' else null end as hnet_chk
+				<choose>
+					<when test="managerList != null and managerList == 'Y'.toString()">
+						, row_number() over(order by a.name asc, a.update_dt desc) as rnum
+					</when>
+					<otherwise>
+						, row_number() over(order by a.update_dt desc, a.name asc) as rnum
+					</otherwise>
+				</choose>
+			from shfda.tb_member_info a
+				left outer join shfda.tb_member_info b on (a.upper_member_uid = b.member_uid and b.leave_yn = 'N')
+			where a.leave_yn = 'N'
+				and a.member_div_cd in ( 'M', 'C')
+				and a.member_uid not like '9%' /* 시스템 관리를 위한 회원은 제외 */
+				<if test="departCd != null"> /* 부서 선택 조건 */
+					and a.depart_cd = #{departCd}
+				</if>
+				<choose>
+					<when test="schOpt != null and schOpt == 'A'.toString()">
+						<if test="schText != null and schText != ''.toString()">
+							<choose>
+								<when test="schType != null and schType == 'NAME'.toString()">
+									and instr(a.name, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'COC_ID'.toString()">
+									and instr(a.coc_id, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'TEL'.toString()">
+									and instr(a.tel, #{schText}, 1, 1) > 0
+								</when>
+							</choose>
+						</if>
+					</when>
+					<when test="schOpt != null and schOpt == 'B'.toString()">
+						<if test="schText != null and schText != ''.toString()">
+							<choose>
+								<when test="schType != null and schType == 'NAME'.toString()">
+									and instr(b.name, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'COC_ID'.toString()">
+									and instr(b.coc_id, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'TEL'.toString()">
+									and instr(b.tel, #{schText}, 1, 1) > 0
+								</when>
+							</choose>
+						</if>
+					</when>
+					<when test="schOpt != null and schOpt == 'C'.toString()">
+						and b.member_uid is null
+						<if test="schText != null and schText != ''.toString()">
+							<choose>
+								<when test="schType != null and schType == 'NAME'.toString()">
+									and instr(a.name, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'COC_ID'.toString()">
+									and instr(a.coc_id, #{schText}, 1, 1) > 0
+								</when>
+								<when test="schType != null and schType == 'TEL'.toString()">
+									and instr(a.tel, #{schText}, 1, 1) > 0
+								</when>
+							</choose>
+						</if>
+					</when>
+				</choose>
+
+
+		<!-- 매니저는 본인 혹은 본인의 상담원만 조회 -->
+ 		<!--<if test="memberDivCd != null and memberDivCd == 'M'.toString()">
+			and (a.member_uid = #{sessionMemberUid} or a.upper_member_uid = #{sessionMemberUid})
+ 		</if>-->
+
+		<!-- 상담원 등록 시 상위 매니저(매니저, 슈퍼관리자) -->
+		<if test="managerList != null and managerList == 'Y'.toString()">
+			and a.member_div_cd in ('S', 'M')
+		</if>
+		) t
+		<!-- page 처리 -->
+		<if test="pageListYn != null and pageListYn == 'Y'.toString()">
+			where t.rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) *
+			(#{pageListCount}*1)
+		</if>
+	</select>
+
+	<!-- 조건별 회원수 조회 -->
+	<select id="selectMemberTypeCount" resultType="CMap">
+		/* member.selectMemberTypeCount */
+		select  (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  	and VALID_YN = 'Y'
+				  	and MEMBER_DIV_CD in ('S', 'A')
+				  	and member_uid not like '9%'
+					<if test="departCd != null"> /* 부서별 */
+						and depart_cd = #{departCd}
+					</if>		  
+				  ) as admin_cnt
+			 , (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  and VALID_YN = 'Y'
+				  and MEMBER_DIV_CD = 'M'
+				  and member_uid not like '9%'
+				  <if test="departCd != null"> /* 부서별 */
+						and depart_cd = #{departCd}
+					</if>
+				  ) as manager_cnt
+			 , (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  and VALID_YN = 'Y'
+				  and MEMBER_DIV_CD = 'C'
+				  and member_uid not like '9%'
+				  <if test="departCd != null"> /* 부서별 */
+						and depart_cd = #{departCd}
+					</if>
+				  ) as counselor_cnt
+			 , (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  and VALID_YN = 'Y'
+				  and MEMBER_DIV_CD in ('M', 'C')) as available_cnt
+			 ,  (select CNSR_MAX_CNT 
+				from shfda.tb_set where site_id = '43021dab-7760-4c26-8e35-145964641916'
+				) as liscence_cnt
+			 /*
+			 , (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  and VALID_YN = 'Y'
+				  and MEMBER_DIV_CD in ('M', 'C')
+				  and member_uid not like '9%') as valid_cnt
+			 , (select count(1)
+				from shfda.tb_MEMBER_INFO
+				where LEAVE_YN = 'N'
+				  and VALID_YN = 'N'
+				  and member_uid not like '9%') as not_valid_cnt
+			  */
+		from dual
+	</select>
+
+	<!-- 회원 조회 -->
+	<select id="selectMember" resultType="CMap">
+		/* member.selectMember */
+		select a.member_uid
+			 , a.id
+			 , a.name
+			 , a.pwd
+			 , a.pwd_chng_dt
+			 , a.email
+			 , a.tel
+			 , a.member_img_url
+			 , a.member_div_cd
+			 , shfda.fn_getCodeNm('MEMBER_DIV_CD', a.member_div_cd) as member_div_nm
+			 , nvl(b.member_uid, '')                          as upper_member_uid
+			 , a.coc_id
+			 , a.cns_possible_yn
+			 , a.leave_yn
+			 , a.valid_yn
+			 , to_char(a.create_dt, 'yyyy-mm-dd hh24:mi:ss')  as create_dt
+			 , a.creater
+			 , to_char(a.update_dt, 'yyyy-mm-dd hh24:mi:ss')  as update_dt
+			 , a.updater
+			 , a.depart_cd
+			 , a.depart_nm
+			 , a.work_area_cd
+			 , a.work_area_nm
+			 , a.work_part_cd
+			 , a.work_part_nm
+		from shfda.tb_member_info a
+				 left outer join shfda.tb_member_info b on (a.upper_member_uid = b.member_uid and b.leave_yn = 'N')
+		where
+		 a.member_uid = #{memberUid}
+		 <if test="departCd != null and !''.equals(departCd.toString())">
+		 	and a.depart_cd = #{departCd}
+		 </if>
+	</select>
+	
+	<!-- 기간계 계정 동기화 테이블 정보 조회 -->
+	<select id="selectTempMember" resultType="CMap">
+		/* member.selectTempMember */
+		select *
+		from shfda.tb_temp_member_info
+		where
+			id = #{searchText}
+	</select>
+
+	<!-- 상담가능 회원수 조회 -->
+	<select id="selectValidMemberCount" resultType="int">
+		/* member.selectValidMemberCount */
+		select count(1) as cnt
+		from shfda.tb_member_info
+		where leave_yn = 'N'
+		  and valid_yn = 'Y'
+		  <!-- and member_div_cd in ('S', 'M', 'C') -->
+		  and member_uid not like '9%'
+	</select>
+
+	<!-- 회원 조회 -->
+	<select id="selectMemberForInsert" resultType="CMap">
+		/* member.selectMemberForInsert */
+		select a.member_uid
+			 , a.id
+			 , a.name
+			 , a.pwd
+			 , a.pwd_chng_dt
+			 , a.email
+			 , a.tel
+			 , a.member_img_url
+			 , a.member_div_cd
+			 , shfda.fn_getCodeNm('MEMBER_DIV_CD', a.member_div_cd) as member_div_nm
+			 , a.upper_member_uid
+			 , a.coc_id
+			 , a.cns_possible_yn
+			 , a.leave_yn
+			 , a.valid_yn
+			 , to_char(a.create_dt, 'yyyy-mm-dd hh24:mi:ss')  as create_dt
+			 , a.creater
+			 , to_char(a.update_dt, 'yyyy-mm-dd hh24:mi:ss')  as update_dt
+			 , a.updater
+			 , a.depart_cd
+			 , a.depart_nm
+		from shfda.tb_member_info a
+		where a.id = #{id}
+	</select>
+	<!-- 회원 등록시 key값 가져오기 -->
+	<select id="selectMemberKey" resultType="String">
+		/* member.selectMemberKey */
+		select shfda.seq_MEMBER_UID.nextval as memberUid from dual
+	</select>
+	<!-- 회원 등록 -->
+	<insert id="insertMember">
+		/* member.insertMember */
+		<!-- 
+		<selectKey keyProperty="memberUid" order="BEFORE" resultType="String">
+			select shfda.seq_MEMBER_UID.nextval from dual
+		</selectKey>
+		 -->
+		insert into shfda.tb_member_info
+		(
+		member_uid
+		, id
+		, name
+		, pwd
+		, pwd_chng_dt
+		, email
+		, tel
+		, member_img_url
+		, member_div_cd
+		, upper_member_uid
+		, coc_id
+		, cns_possible_yn
+		, leave_yn
+		, valid_yn
+		, depart_cd
+		, depart_nm
+		, work_area_cd
+		, work_area_nm
+		, work_part_cd
+		, work_part_nm
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, honors_pwd
+		)
+		values
+		(
+		#{memberUid}
+		, #{id}
+		, #{name}
+		, #{pwd}
+		, null
+		, #{email}
+		, #{tel}
+		, ''
+		, #{memberDivCd}
+		, #{upperMemberUid}
+		, #{id}
+		, #{cnsPossibleYn}
+		, 'N'
+		, 'N'
+		, #{departCd}
+		, shfda.fn_getcodenm('DEPART_CD', #{departCd})
+		, #{workAreaCd}
+		, #{workAreaNm}
+		, #{workPartCd}
+		, #{workPartNm}
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, #{honorPwd}
+		)
+	</insert>
+	
+
+	
+	
+	<!-- 사용자 설정 저장 -->
+	<update id="mergeMemberSet">
+		/* member.mergeMemberSet */
+		merge
+		into shfda.tb_set_cnsr
+		using dual on (member_uid =
+		#{memberUid}
+		)
+		when
+		matched
+		then
+		update
+			set work_status_cd = 'W'
+			, update_dt = sysdate
+			, updater = #{sessionMemberUid}
+			when not matched then
+		insert (
+			member_uid , work_status_cd
+			, enter_use_yn
+			, avatar_num
+			, create_dt
+			, creater
+			, update_dt
+			, updater
+		) values ( #{memberUid}
+			, 'W'
+			, 'Y'
+			, null
+			, sysdate
+			, #{sessionMemberUid}
+			, sysdate
+			, #{sessionMemberUid}
+			)
+	</update>
+
+	<!-- 계정활성화 상태 체크 -->
+	<select id="selectValidCheck" resultType="int">
+		/* member.selectValidCheck */
+		select count(*)
+		from shfda.tb_member_info a
+		left outer join shfda.tb_member_info b
+		on a.upper_member_uid = b.member_uid
+		where
+			a.coc_id = #{username}
+			<if test="validYn != null and validYn != ''.toString()">
+			and a.valid_yn = #{validYn}
+			</if> 
+	</select>
+
+	<!-- 로그인 실패 6회이상 체크 -->
+	<select id="selectFailCheck" resultType="int">
+		/* member.selectFailCheck */
+		select a.login_fail_cnt cnt
+		from shfda.tb_member_info a
+		left outer join shfda.tb_member_info b
+		on a.upper_member_uid = b.member_uid
+		where
+			a.coc_id = #{username}
+			and a.valid_yn = 'Y'
+	</select>
+
+	<!-- 아이디 비밀번호 체크 -->
+	<select id="selectIdPwdCheck" resultType="int">
+		/* member.selectIdPwdCheck */
+		select count(*)
+		from shfda.tb_member_info
+		where
+			1=1
+			<if test="memberUid != null and memberUid != ''.toString()">
+			and member_uid = #{memberUid}
+			</if>
+			<if test="username != null and username != ''.toString()">
+			and coc_id = #{username}
+			</if>
+			<if test="password != null and password != ''.toString()">
+			and pwd = #{password}
+			</if>
+	</select>
+
+	<!-- 로그인 실패 업데이트 -->
+	<update id="updatePwdFail">
+		/* member.updatePwdFail */
+		update shfda.tb_member_info
+		set
+			login_fail_cnt = #{loginFailCnt}
+			<if test="validYn != null">
+			, valid_yn = #{validYn}
+			</if>
+		where
+			coc_id = #{username}
+	</update>
+
+	<!-- 패스워드 주기 90일이상 체크 -->
+	<select id="passwd90Check" resultType="int">
+	<![CDATA[
+		/* member.passwd90Check */
+		select count(coc_id)
+		from shfda.tb_member_info a
+		where
+			a.coc_id = #{username}
+			and sysdate < pwd_chng_dt + 90
+	]]>
+	</select>
+
+	<!-- username으로 memberUid 가져오기 -->
+	<select id="selectMemberUid" resultType="String">
+	<![CDATA[
+		/* member.selectMemberUid */
+		select member_uid memberUid
+		from shfda.tb_member_info a
+		where
+			a.coc_id = #{username}
+	]]>
+	</select>
+
+	<!-- 로그인 날짜 업데이트 -->
+	<update id="updateLoginDate">
+		/* member.updateLoginDate */
+		update shfda.tb_member_info
+		set
+			prev_login_dt = login_dt
+			, login_dt = sysdate
+			<if test="linkIp">
+			, prev_link_ip = link_ip
+			, link_ip = #{linkIp}
+			</if>
+		where
+			member_uid = #{memberUid}
+	</update>
+
+	<!-- 회원 수정 -->
+	<update id="updateMember">
+		/* member.updateMember */
+		update shfda.tb_member_info
+		set
+			member_div_cd = #{memberDivCd}
+			, upper_member_uid = #{upperMemberUid}
+			, depart_cd = #{departCd}
+			, depart_nm = shfda.fn_getcodenm('DEPART_CD', #{departCd})
+			, cns_possible_yn = #{cnsPossibleYn}
+			, leave_yn = 'N'
+			, name = #{name}
+			, update_dt = sysdate
+			, updater = #{sessionMemberUid}
+		where
+			member_uid = #{memberUid}
+	</update>
+
+	<!-- 비밀번호 변경 -->
+	<update id="changePasswd">
+		/* member.changePasswd */
+		update shfda.tb_member_info
+		set
+			pwd3 = pwd2,
+			pwd2 = pwd,
+			pwd = #{pwd},
+			pwd_chng_dt = sysdate,
+			<if test="validYn != null">
+			valid_yn = #{validYn},
+			</if>
+			login_fail_cnt = 0
+		where 1=1
+		<if test="cocId != null and cocId != ''.toString()">
+			and coc_id = #{cocId}
+		</if>
+		<if test="memberUid != null and memberUid != ''.toString()">
+			and member_uid = #{memberUid}
+		</if>
+		<if test="username != null and username != ''.toString()">
+			and id = #{username}
+		</if>
+	</update>
+
+	<!-- 아너스넷 비밀번호,부지점코드 변경 -->
+	<update id="changeHonorPasswd">
+		/* member.changeHonorPasswd */
+		update shfda.tb_member_info
+		set
+			update_dt =  sysdate
+		<if test="honorsPwd != null and honorsPwd != ''.toString()">
+			,honors_pwd = #{honorsPwd}
+		</if>
+		<if test="odtbrCode != null and odtbrCode != ''.toString()">
+			,odtbr_code =  #{odtbrCode}
+		</if>
+		where id = #{id}
+	</update>
+	
+	<!-- 아너스넷 비밀번호,부지점코드 조회 -->
+	<select id="selectHonorsNetPw" resultType="CMap">
+		/*member.selectHonorsNetPw*/
+		select 
+	        honors_pwd
+	       ,odtbr_code 
+	    from 
+	        shfda.tb_member_info a 
+	    where 
+	        a.Id = #{id}
+	</select>
+
+	<!-- 패스워드 3회 중복체크 -->
+	<select id="passwd3DuplCheck" resultType="int">
+		/* member.passwd3DuplCheck */
+	<![CDATA[
+		select count(coc_id)
+		from shfda.tb_member_info a
+		where
+			member_uid = #{memberUid}
+			and (pwd = #{pwd}
+			or pwd2 = #{pwd}
+			or pwd3 = #{pwd})
+	]]>
+	</select>
+
+	<!-- 로그인 여부 30일이상, 패스워드 변경 90일 이상 체크 (배치) -->
+	<select id="selectLoginMemberCheck" resultType="CMap">
+		/* member.selectLoginMemberCheck */
+	<![CDATA[
+		select member_uid
+		from shfda.tb_member_info
+		where
+			leave_yn = 'N'
+			and valid_yn = 'Y'
+			and member_div_cd in ('M', 'C')
+			and login_dt is not null
+			and (
+				login_dt + 30 <= sysdate
+				/* or pwd_chng_dt + 90 <= sysdate */
+			)
+	]]>
+	</select>
+
+	<!-- 로그인 여부 30일이상, 패스워드 변경 90일 이상인 회원 계정 비활성화 (배치)  -->
+	<update id="updateLoginMemberCheck">
+		/* member.updateLoginMemberCheck */
+		update shfda.tb_member_info
+		set
+			valid_yn = 'N'
+			, login_dt = null
+		where
+			1=1
+			and member_uid = #{member_uid}
+			and member_div_cd in ('M', 'C')
+	</update>
+
+	<!-- 카테고리 회원 매핑 저장 -->	
+	<insert id="insertCtgMemberMapping">
+		/* member.insertCtgMemberMapping */
+		insert all 
+		<foreach collection="ctgNumArr" item="ctgNum" close=" SELECT * FROM DUAL"  >
+		into shfda.tb_ctg_member_mapping
+		(
+			member_uid
+			,ctg_num
+			,create_dt
+			,creater
+		)
+		values
+		(
+			 #{memberUid}
+			,#{ctgNum}
+			,sysdate
+			,#{creater}
+		)
+		</foreach>
+	</insert>
+
+	<update id="updateCtgMemberMapping">
+		/* member.updateCtgMemberMapping */
+		update shfda.tb_ctg_member_mapping 
+		set
+			first_yn ='Y'
+		where
+			member_uid = #{memberUid}
+			and ctg_num = #{firstYn}
+	</update>
+
+	<!-- 카테고리 회원 매핑 삭제 -->	
+	<insert id="deleteCtgMemberMapping">
+		/* member.deleteCtgMemberMapping */
+		delete from shfda.tb_ctg_member_mapping
+		where
+			member_uid = #{memberUid}
+	</insert>
+
+	<!-- 카테고리 회원 매핑 조회 -->
+	<select id="selectCtgMemberMapping" resultType="CMap">
+		/* member.selectCtgMemberMapping */
+		SELECT
+			ctg_num
+			,first_yn
+		FROM
+			(
+			SELECT
+				t1.ctg_nm AS ctg_nm1,
+				t1.dft_ctg_yn AS dft_ctg_yn1,
+				t2.ctg_nm AS ctg_nm2,
+				t3.ctg_num AS ctg_num,
+				t3.first_yn
+			FROM
+				shfda.tb_ctg_info t1
+			LEFT OUTER JOIN shfda.tb_ctg_info t2 ON
+				(t1.ctg_num = t2.upper_ctg_num
+				AND t2.del_yn = 'N')
+			LEFT OUTER JOIN shfda.tb_ctg_member_mapping t3 ON
+				(t2.ctg_num = t3.ctg_num AND member_uid = #{memberUid})
+			WHERE
+				t1.ctg_dpt = 1
+				<!-- 채널별 분기 -->
+				AND T3.MEMBER_UID = #{memberUid}
+				<!-- and t1.depart_cd = #{departCd} -->
+				AND t1.del_yn = 'N'
+				 ) t1
+		ORDER BY
+			t1.dft_ctg_yn1 ASC,
+			t1.ctg_nm1 ASC,
+			t1.ctg_nm2 ASC
+	</select>
+
+	<!-- 나를 상위 상담관리자로 지정한 경우 모두 제거 -->
+	<update id="deleteUpperMemberUid">
+		/* member.deleteUpperMemberUid */
+		update shfda.tb_member_info
+		set upper_member_uid = ''
+		  , update_dt        = sysdate
+		  , updater          = #{sessionMemberUid}
+		where upper_member_uid = #{memberUid}
+	</update>
+
+	<!-- 계정 활성화 / 중지 -->
+	<update id="updateMemberValid">
+		/* member.updateMemberValid */
+		update shfda.tb_member_info
+		set valid_yn  = #{validYn}
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where member_uid = #{memberUid}
+	</update>
+
+	<!-- 회원 삭제 -->
+	<update id="deleteMember">
+		/* member.deleteMember */
+		update shfda.tb_member_info
+		set leave_yn  = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where member_uid = #{memberUid}
+	</update>
+
+	<!-- 임시 회원 목록 조회 -->
+	<select id="selectTmpMemberList" resultType="CMap">
+		/* member.selectTmpMemberList */
+		select reg_num
+			 , id
+			 , name
+			 , depart_cd
+			 , depart_nm
+			 , use_yn
+			 , create_dt
+		from shfda.tb_temp_member_info
+		where name like '%' || #{name} || '%'
+			and use_yn = 'Y'
+	</select>
+
+	<!-- 임시 회원 등록 -->
+	<insert id="insertTempMember">
+		/* member.insertTempMember */
+		insert into shfda.tb_temp_member_info
+		( reg_num
+		, id
+		, name
+		, depart_cd
+		, depart_nm
+		, cstm_div_cd
+		, use_yn
+		, create_dt)
+		values ( (select nvl(max(reg_num), 0) + 1 from shfda.tb_temp_member_info)
+			   , #{id}
+			   , #{name}
+			   , #{departCd}
+			   , #{departNm}
+			   , #{cstmDivCd}
+			   , 'N'
+			   , sysdate)
+	</insert>
+
+	<!-- FP 목록 삭제 -->
+	<insert id="deleteFpTempMemberInfo">
+		/* member.deleteFpTempMemberInfo */
+		delete
+		from shfda.tb_fp_temp_member_info
+	</insert>
+
+	<!-- FP 목록 등록 -->
+	<insert id="insertFpTempMember">
+		/* member.insertFpTempMember */
+		insert into shfda.tb_fp_temp_member_info (id, create_dt)
+		values (#{id}, sysdate)
+	</insert>
+
+	<!-- FP 목록에 존재하지 않는 임시 회원 삭제 -->
+	<delete id="deleteFpTempMember">
+		/* member.deleteFpTempMember */
+		delete
+		from shfda.tb_temp_member_info a
+		where a.cstm_div_cd = 'FP'
+		  and not exists(select b.id from shfda.tb_fp_temp_member_info b where a.id = b.id)
+	</delete>
+
+	<!-- 기존 임시 회원 삭제 -->
+	<delete id="deleteTempMember">
+		/* member.deleteTempMember */
+		delete
+		from shfda.tb_temp_member_info
+		where use_yn = 'Y'
+	</delete>
+
+	<!-- 신규 임시 회원 사용으로 변경 -->
+	<update id="updateTempMember">
+		/* member.updateTempMember */
+		update shfda.tb_temp_member_info
+		set use_yn = 'Y'
+	</update>
+
+	<!-- 회원 탈퇴 처리 - 신규 DB에 존재하지 않는 회원은 탈퇴 처리 -->
+	<update id="updateMemberLeaveAuto">
+		/* member.updateMemberLeaveAuto */
+		update shfda.tb_member_info a
+		set a.leave_yn  = 'Y'
+		  , a.update_dt = sysdate
+		  , a.updater   = #{systemUser}
+		where not EXISTS(select reg_num from shfda.tb_temp_member_info b where a.id = b.id)
+		  and a.member_uid not like '9%'
+		  and a.leave_yn = 'N'
+	</update>
+
+	<!-- 회원 미인증 처리 - 부서 및 이름 변경 시 미인증 처리 -->
+	<update id="updateMemberValidAuto">
+		/* member.updateMemberValidAuto */
+		update shfda.tb_member_info a
+		set a.valid_yn  = 'N'
+		  , a.name      = (select b.name from shfda.tb_temp_member_info b where a.id = b.id and rownum = 1)
+		  , a.depart_cd = (select b.depart_cd from shfda.tb_temp_member_info b where a.id = b.id and rownum = 1)
+		  , a.depart_nm = (select b.depart_nm from shfda.tb_temp_member_info b where a.id = b.id and rownum = 1)
+		  , a.update_dt = sysdate
+		  , a.updater   = #{systemUser}
+		where EXISTS(select reg_num
+					 from shfda.tb_temp_member_info b
+					 where a.id = b.id
+					   and (a.name != b.name or a.depart_cd != b.depart_cd))
+		  and a.member_uid not like '9%'
+		  and a.leave_yn = 'N'
+	</update>
+
+	<!-- 회원 수정 - 부서명만 변경시 update -->
+	<update id="updateMemberDepartNm">
+		/* member.updateMemberDepartNm */
+		update shfda.tb_member_info a
+		set a.depart_nm = (select b.depart_nm from shfda.tb_temp_member_info b where a.id = b.id and rownum = 1)
+		  , a.update_dt = sysdate
+		  , a.updater   = #{systemUser}
+		where EXISTS(select reg_num
+					 from shfda.tb_temp_member_info b
+					 where a.id = b.id
+					   and a.name = b.name
+					   and a.depart_cd = b.depart_cd
+					   and a.depart_nm != b.depart_nm)
+		  and a.member_uid not like '9%'
+		  and a.leave_yn = 'N'
+	</update>
+
+	<!-- 사용자 조회시 컬럼 -->
+	<sql id="memberColumns">
+		/* member.memberColumns */
+		a.*, b.work_status_cd, b.enter_use_yn, b.avatar_num
+	</sql>
+	<!-- 사용자 조회시 Join 테이블 -->
+	<sql id="memberJoinTables">
+		shfda.tb_member_info a
+		left join shfda.tb_set_cnsr b
+		on a.member_uid = b.member_uid
+	</sql>
+
+	<!-- 사용자 조회 -->
+	<select id="selectCMember" resultType="CMap">
+		/* member.selectCMember */
+		select
+		<include refid="memberColumns"/>
+		from
+		<include refid="memberJoinTables"/>
+		<where>
+			<if test="id != null">
+				and a.id = #{id}
+			</if>
+			<if test="leaveYn != null">
+				and a.leave_yn = #{leaveYn}
+			</if>
+			<if test="validYn != null">
+				and a.valid_yn = #{validYn}
+			</if>
+			<if test="memberUid != null">
+				and a.member_uid = #{memberUid}
+			</if>
+			<if test="memberList != null">
+				and a.member_uid in
+				<foreach collection="memberList" item="member" open="(" separator="," close=")">
+					#{member.member_uid}
+				</foreach>
+			</if>
+			<if test="cocId != null">
+				and a.coc_id = #{cocId}
+			</if>
+			<if test="cnsPossibleYn != null">
+				and a.cns_possible_yn = #{cnsPossibleYn}
+			</if>
+			<if test="memberDivCd != null">
+				and a.member_div_cd = #{memberDivCd}
+			</if>
+			<if test="pwd != null">
+				and a.pwd = #{pwd}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 아너스넷 skip 유저 체크 -->
+	<select id="selectSkipUserCheck" resultType="int">
+		/* member.selectSkipUserCheck */
+		select 
+		    count(*) 
+		from 
+		    shfda.tb_member_info a
+		where 
+		    a.member_group_div_cd = 'Y' 
+		    and a.id = #{id}
+	</select>
+
+	<!-- 상담 가능한 상담원 목록 조회 -->
+	<select id="selectAvailableMemberList" resultType="CMap">
+		/* member.selectAvailableMemberList */
+		select
+		<include refid="memberColumns"/>
+		from
+		<include refid="memberJoinTables"/>
+		inner join shfda.tb_sch_cnsr f
+		on a.member_uid = f.member_uid
+		<where>
+			a.leave_yn = 'N'
+			and a.valid_yn = 'Y'
+			and a.cns_possible_yn = 'Y'
+			<if test="memberDivCd != null">
+				and a.member_div_cd = #{memberDivCd}
+			</if>
+			<if test="memberList != null">
+				and a.member_uid in
+				<foreach collection="memberList" item="member" open="(" separator="," close=")">
+					#{member.member_uid}
+				</foreach>
+			</if>
+			<if test="departCd != null">
+				and a.depart_cd = #{departCd}
+			</if>
+			<if test="workStatusCd != null">
+				and b.work_status_cd = #{workStatusCd}
+			</if>
+			and f.sch_date = to_char(sysdate, 'YYYYMMDD')
+			and f.cns_possible_yn = 'Y'
+			<if test="isScheduled == true" >
+			and f.start_time &lt;= to_char(sysdate, 'HH24MI')
+			and f.end_time &gt; to_char(sysdate, 'HH24MI')
+			</if>
+		</where>
+		order by depart_nm asc
+	</select>
+
+	<!-- 상담원 배정: 상담원별 상담중인 채팅방 개수 -->
+	<select id="selectMemberUidAndAssignCount" resultType="CMap">
+		/* member.selectMemberUidAndAssignCount */
+		select
+		a.member_uid, a.name, a.member_div_cd, a.upper_member_uid, a.cnsr_max_cnt, a.depart_cd,a.depart_nm,
+		nvl(d.assigned_count, 0) as assigned_count,
+		nvl(b.assign_count, 0) as assign_count,
+		nvl(c.counseling_count, 0) as counseling_count
+		from shfda.tb_member_info a
+
+		/* 미접수 */
+		left join (
+		select member_uid, count(member_uid) as assigned_count
+		from shfda.tb_chat_room
+		<where>
+			end_yn = 'N'
+			and chat_room_status_cd = '41'
+			and room_create_dt &gt;= trunc(sysdate - 1)
+			<if test="memberList != null">
+				and member_uid in
+				<foreach collection="memberList" item="member" open="(" separator="," close=")">
+					#{member.member_uid}
+				</foreach>
+			</if>
+		</where>
+		group by member_uid
+		) d
+		on a.member_uid = d.member_uid
+
+		/* 배정된 미종료 방 전체 */
+		left join (
+		select member_uid, count(member_uid) as assign_count
+		from shfda.tb_chat_room
+		<where>
+			end_yn = 'N'
+			and room_create_dt &gt;= trunc(sysdate - 1)
+			<if test="memberList != null">
+				and member_uid in
+				<foreach collection="memberList" item="member" open="(" separator="," close=")">
+					#{member.member_uid}
+				</foreach>
+			</if>
+		</where>
+		group by member_uid
+		) b
+		on a.member_uid = b.member_uid
+
+		/* 진행중 */
+		left join (
+		select member_uid, count(member_uid) as counseling_count
+		from shfda.tb_chat_room
+		<where>
+			end_yn = 'N'
+			and chat_room_status_cd in ('51', '61')
+			and room_create_dt &gt;= trunc(sysdate - 1)
+			<if test="memberList != null">
+				and member_uid in
+				<foreach collection="memberList" item="member" open="(" separator="," close=")">
+					#{member.member_uid}
+				</foreach>
+			</if>
+		</where>
+		group by member_uid
+		) c
+		on a.member_uid = c.member_uid
+
+		<if test="memberList != null">
+			where
+			a.member_uid in
+			<foreach collection="memberList" item="member" open="(" separator="," close=")">
+				#{member.member_uid}
+			</foreach>
+		</if>
+		order by depart_nm
+	</select>
+
+	<!-- 사용자 설정 저장 -->
+	<update id="saveMemberSetting">
+		/* member.saveMemberSetting */
+		merge into shfda.tb_set_cnsr
+		using dual
+		on (member_uid = #{memberUid})
+		when matched then
+		update
+		<set>
+			<if test="workStatusCd != null">
+				work_status_cd = #{workStatusCd},
+			</if>
+			<if test="enterUseYn != null">
+				enter_use_yn = #{enterUseYn},
+			</if>
+			<if test="avatarNum != null">
+				avatar_num = #{avatarNum},
+			</if>
+			update_dt = sysdate,
+			updater = #{memberUid}
+		</set>
+		when not matched then
+		insert (
+		member_uid,
+		work_status_cd,
+		enter_use_yn,
+		avatar_num,
+		create_dt,
+		creater
+		) values (
+		#{memberUid},
+		#{workStatusCd},
+		#{enterUseYn},
+		#{avatarNum},
+		sysdate,
+		#{memberUid}
+		)
+	</update>
+
+	<!-- 고객 정보 조회 -->
+	<select id="selectCustomer" resultType="CMap">
+		/* member.selectCustomer */
+		select
+			a.*
+			, shfda.fn_getcodenm('CSTM_DIV_CD', a.cstm_div_cd) as cstm_div_nm
+			, shfda.fn_getcodenm('CSTM_LINK_DIV_CD', a.cstm_link_div_cd) as cstm_link_div_nm
+		from shfda.tb_chat_cstm_info a
+		<where>
+			<if test="cstmUid != null">
+				and cstm_uid = #{cstmUid}
+			</if>
+			<if test="cocId != null">
+				and coc_id = #{cocId}
+			</if>
+			<if test="cstmLinkDivCd != null">
+				and cstm_link_div_cd = #{cstmLinkDivCd}
+			</if>
+			<if test="cstmLinkServiceUid != null">
+				and cstm_link_service_uid = #{cstmLinkServiceUid}
+			</if>
+			<if test="cstmLinkCustomerUid != null">
+				and cstm_link_customer_uid = #{cstmLinkCustomerUid}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 고객 정보 조회 by ChatRoom -->
+	<select id="selectCustomerByChatRoom" resultType="CMap">
+		/* member.selectCustomerByChatRoom */
+		select
+			a.*
+			, shfda.fn_getcodenm('CSTM_DIV_CD', a.cstm_div_cd) as cstm_div_nm
+			, shfda.fn_getcodenm('CSTM_LINK_DIV_CD', a.cstm_link_div_cd) as cstm_link_div_nm
+		from shfda.tb_chat_cstm_info a
+		where
+			cstm_uid = (select cstm_uid from shfda.tb_chat_room where chat_room_uid = #{chatRoomUid})
+	</select>
+
+	<!-- 고객 정보 저장 -->
+	<update id="saveCustomer">
+		/* member.saveCustomer */
+		merge into shfda.tb_chat_cstm_info
+		using dual
+		
+		<!-- 채널 / UserId 존재 유무 확인 -->
+		on (cstm_uid = #{cstmUid} and cstm_link_div_cd = #{cstmLinkDivCd})
+		when matched then
+		update
+		<set>
+			<if test="cocId != null">
+				coc_id = #{cocId},
+			</if>
+			<if test="cocNm != null">
+				coc_nm = #{cocNm},
+			</if>
+			<if test="sex != null">
+				sex = #{sex},
+			</if>
+			<if test="birthDate != null">
+				birth_date = #{birthDate},
+			</if>
+			<if test="gradeNum != null">
+				grade_num = #{gradeNum},
+			</if>
+			<if test="gradeMemo != null">
+				grade_memo = #{gradeMemo},
+			</if>
+			<if test="gradeRegMemberUid != null">
+				grade_reg_member_uid = #{gradeRegMemberUid},
+				grade_reg_dt = sysdate,
+			</if>
+			<if test="cstmDivCd != null">
+				cstm_div_cd = #{cstmDivCd},
+			</if>
+			<if test="loginYn != null">
+				login_yn = #{loginYn},
+			</if>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="updater != null">
+				updater = #{updater},
+			</if>
+			<if test="linkIp != null">
+				link_ip = #{linkIp},
+			</if>
+			<if test="kakaoCrtfc != null">
+				kakao_crtfc = #{kakaoCrtfc},
+			</if>
+			update_dt = sysdate
+		</set>
+		when not matched then
+		insert (
+		cstm_uid,
+		coc_id,
+		sex,
+		birth_date,
+		link_ip,
+		cstm_div_cd,
+		cstm_link_div_cd,
+		cstm_link_service_uid,
+		cstm_link_customer_uid,
+		login_yn,
+		name,
+		create_dt,
+		creater
+		) values (
+		#{cstmUid},
+		#{cocId},
+		#{sex},
+		#{birthDate},
+		#{linkIp},
+		#{cstmDivCd},
+		#{cstmLinkDivCd},
+		#{cstmLinkServiceUid},
+		#{cstmLinkCustomerUid},
+		#{loginYn},
+		#{name},
+		sysdate,
+		#{creater}
+		)
+	</update>
+
+	<!-- 고객 삭제 -->
+	<delete id="deleteCustomer">
+		/* member.deleteCustomer */
+		delete
+		from shfda.tb_chat_cstm_info
+		where cstm_uid = #{cstmUid}
+	</delete>
+	
+	<!-- 카카오 30일 초과 고객 정보 삭제 -->
+	<delete id="deleteCustomerKakao">
+		/* member.deleteCustomerKakao */
+		delete
+		from shfda.tb_chat_cstm_info
+		where CREATE_DT <![CDATA[<]]> to_date(sysdate - 30)
+		AND CSTM_LINK_DIV_CD = 'B'
+	</delete>
+	
+	<!-- 고객 Grade(코끼리, VIP ...) 등록 -->
+	<update id="mergeCstmGradeHis">
+		/* member.mergeCstmGradeHis */
+		merge
+		into shfda.tb_cstm_grade_his
+		using dual on (cstm_uid = #{cstmUid})
+
+		when not matched then
+		insert (
+			grade_his_num,
+			cstm_uid,
+			grade_num,
+			grade_memo,
+			create_dt,
+			creater
+		) values (
+			shfda.seq_grade_his_num.nextval,
+			#{cstmUid},
+			#{gradeNum},
+			#{gradeMemo},
+			sysdate,
+			#{creater}
+		)
+		when matched then
+		update
+			set grade_memo = #{gradeMemo}
+	</update>
+
+	<!-- 임시 회원 조회 -->
+	<select id="selectTmpMember" resultType="CMap">
+		/* member.selectTmpMember */
+		select *
+		from shfda.tb_temp_member_info
+		where
+			id = #{id}
+	</select>
+
+	<!-- 고객 민감정보 조회 -->
+	<select id="selectCstmSinfo" resultType="CMap">
+		/* member.selectCstmSinfo */
+		select a.*
+			, (SELECT BANK_NM FROM shfda.tb_BANK B WHERE A.BANK_CD=B.BANK_CD) bank_nm
+			, (SELECT CARD_NM FROM shfda.tb_CARD B WHERE A.CARD_CD=B.CARD_CD) card_nm
+		from shfda.tb_cstm_sinfo a
+		where
+			a.chat_room_uid = #{chatRoomUid}
+	</select>
+
+	<!-- 고객 민감정보 저장 -->
+	<update id="saveCstmSinfo">
+		/* member.saveCstmSinfo */
+		merge into shfda.tb_cstm_sinfo
+		using dual
+		on (chat_room_uid = #{chatRoomUid})
+		when matched then
+		update
+		<set>
+			 use_yn = #{useYn}
+		<if test="part == '1'.toString()">		
+			, name=#{name}
+			, tel_no1 = #{telNo1}
+			, tel_no2 = #{telNo2}
+			, tel_no3 = #{telNo3}
+			, update_part1_dt = sysdate
+		</if>
+		<if test="part == '2'.toString()">				
+			,ACCOUNT_NM       =#{accountNm}
+			,BANK_CD          =#{bankCd}
+			,ACCOUNT_NO       =#{accountNo}
+			,UPDATE_PART2_DT   =SYSDATE
+		</if>
+		<if test="part == '3'.toString()">				
+			,CARD_CSTM      =#{cardCstm}
+			,CARD_CD        =#{cardCd}
+			,CARD_NO1       =#{cardNo1}
+			,CARD_NO2       =#{cardNo2}
+			,CARD_NO3       =#{cardNo3}
+			,CARD_NO4       =#{cardNo4}			
+			,CHECK_MONTH =#{checkMonth}
+			,CHECK_YEAR =#{checkYear}
+			,UPDATE_PART3_DT   =SYSDATE
+		</if>	
+		<if test="part == '4'.toString()">				
+			,ETC              =#{etc}
+			,UPDATE_PART4_DT   =SYSDATE			
+		</if>	
+
+		</set>                
+		when not matched then
+		insert (
+			CHAT_ROOM_UID	
+		<if test="part == '1'.toString()">				
+			,NAME
+			,TEL_NO1
+			,TEL_NO2
+			,TEL_NO3
+			,UPDATE_PART1_DT
+		</if>	
+		<if test="part == '2'.toString()">			
+			,ACCOUNT_NM
+			,BANK_CD
+			,ACCOUNT_NO
+			,UPDATE_PART2_DT
+		</if>	
+		<if test="part == '3'.toString()">				
+			,CARD_CSTM
+			,CARD_CD
+			,CARD_NO1
+			,CARD_NO2
+			,CARD_NO3
+			,CARD_NO4						
+			,CHECK_MONTH
+			,CHECK_YEAR
+			,UPDATE_PART3_DT
+		</if>	
+		<if test="part == '4'.toString()">				
+			,ETC
+			,UPDATE_PART4_DT
+		</if>	
+			,USE_YN
+			,CREATE_DT
+			,CREATER
+		) values (
+			#{chatRoomUid}
+		<if test="part == '1'.toString()">				
+			,#{name}
+			,#{telNo1}
+			,#{telNo2}
+			,#{telNo3}	
+			,#{updatePart1Dt}			
+		</if>	
+		<if test="part == '2'.toString()">						
+			,#{accountNm}
+			,#{bankCd}
+			,#{accountNo}
+			,#{updatePart2Dt}			
+		</if>	
+		<if test="part == '3'.toString()">				
+			,#{cardCstm}
+			,#{cardCd}
+			,#{cardNo1}
+			,#{cardNo2}
+			,#{cardNo3}			
+			,#{cardNo4}
+			,#{checkMonth}
+			,#{checkYear}
+			,#{updatePart3Dt}			
+		</if>	
+		<if test="part == '4'.toString()">				
+			,#{etc}
+			,#{updatePart4Dt}
+		</if>	
+			,#{useYn}
+			,SYSDATE
+			,#{creater}
+
+		)
+	</update>
+
+	<!-- 고객 민감정보 삭제 -->
+	<delete id="deleteCstmSinfo">
+		/* member.deleteCstmSinfo */
+		delete from shfda.tb_cstm_sinfo
+		where
+			chat_room_uid = #{chatRoomUid}
+	</delete>
+
+	<!-- 은행조회 -->
+	<select id="selectBankList" resultType="BankVO">
+		/* member.selectBankList */
+		select
+			 BANK_SEQ   bankSeq
+			,BANK_CD    bankCd
+			,BANK_NM    bankNm
+			,BANK_TYPE  bankType
+			,ETC        etc
+			,USE_YN     useYn
+			,CREATE_DT  createDt
+			,CREATER    creater
+		from shfda.tb_BANK
+		<where>
+		<if test="bankCd != null and bankCd != ''.toString()">		
+			BANK_CD = #{bankCd}
+		</if>	
+		</where>
+
+		ORDER BY BANK_SEQ
+	</select>
+	
+		<!-- 카드조회 -->
+	<select id="selectCardList" resultType="CardVO">
+		/* member.selectCardList */
+		select
+			 CARD_SEQ   cardSeq
+			,CARD_CD    cardCd
+			,CARD_NM    cardNm
+			,CARD_TYPE  cardType
+			,ETC        etc
+			,USE_YN     useYn
+			,CREATE_DT  createDt
+			,CREATER    creater
+		from shfda.tb_CARD
+		<where>
+		<if test="cardCd != null and cardCd != ''.toString()">		
+			CARD_CD = #{cardCd}
+		</if>			
+		</where>
+		ORDER BY CARD_SEQ
+	</select>		
+
+	<!-- CBCLS001 인터페이스 상담후처리이력조회 조회 -->
+	<select id="CBCLS001" resultType="CMap">
+		/* DEPRECATED member.CBCLS001 */
+		SELECT * FROM (
+			select
+				 room.CHAT_ROOM_UID chat_room_uid   /* 채팅방ID */
+				,cstm.COC_ID user_id                   /* 고객ID */
+				,room.CSTM_LINK_DIV_CD channel	  /* 채널 */
+				,room.CHAT_ROOM_STATUS_CD status   /* 상담상태 */
+				,room.ROOM_CREATE_DT start_datetime /* 상담시작시간 */
+				,room.ROOM_END_DT  end_datetime    /* 상담종료시간 */
+				,ctg.ctg_num1 dep1CtgCd            /* 대분류코드 */
+				,ctg.ctg_nm1  dep1CtgNm            /* 대분류명 */
+				,ctg.ctg_num2 dep2CtgCd            /* 중분류코드 */
+				,ctg.ctg_nm2  dep2CtgNm            /* 중분류명 */
+				,ctg.ctg_num3 dep3CtgCd            /* 소분류코드 */
+				,ctg.ctg_nm3  dep3CtgNm            /* 소분류명 */						
+				,memb.COC_ID  counselorNo      		/* 상담원번호 */
+				,memb.NAME  counselorNm              /* 상담원명 */
+				,room.CSTM_UID  cstm_uid           /* 해피톡생성 고객 key */
+				,cstm.CSTM_LINK_CUSTOMER_UID  channel_customer_id      /* 채널별 고객 key */			
+				,cstm.NAME  user_nm                  /* 고객명 */
+				,room.CSTM_OS_DIV_CD  device    /* 고객기기 */
+				,evl.EVL_SCORE  score                    /* 평가점수 */
+				,evl.EVL_CONT   score_contents           /* 평가내용 */
+				,end.MEMO  end_contents            /* 후처리상담내용 */
+				,end.CREATE_DT  end_reg_date             /* 후처리 등록일시 */			
+				,room.END_DIV_CD end_div_cd 	     /* 채팅상담종료 구분 */	
+				,row_number() over(order by cstm.COC_ID) as rnum				
+			from shfda.tb_CHAT_ROOM room
+			left join shfda.tb_CHAT_CSTM_INFO cstm
+			on room.cstm_uid = cstm.cstm_uid
+			left join shfda.tb_MEMBER_INFO memb
+			on room.MEMBER_UID = memb.MEMBER_UID		
+			left join shfda.tb_CNS_EVL evl
+			on room.CHAT_ROOM_UID = evl.CHAT_ROOM_UID	
+			left join shfda.tb_CHAT_END_INFO end
+			on room.CHAT_ROOM_UID = end.CHAT_ROOM_UID	
+			left join (
+				select t1.ctg_num    as ctg_num1
+					  , t1.ctg_nm     as ctg_nm1
+					  , t2.ctg_num    as ctg_num2
+					  , t2.ctg_nm     as ctg_nm2
+					  , t3.ctg_num    as ctg_num3
+					  , t3.ctg_nm     as ctg_nm3
+				 from shfda.tb_ctg_info t1
+						  left outer join shfda.tb_ctg_info t2 on (t1.ctg_num = t2.upper_ctg_num and t2.del_yn = 'N')
+						  left outer join shfda.tb_ctg_info t3 on (t2.ctg_num = t3.upper_ctg_num and t3.del_yn = 'N')
+				 where 1=1
+				 /*and t3.ctg_num = '184' */
+				   and t1.del_yn = 'N'	
+			) ctg	   	
+			on room.CTG_NUM = ctg.ctg_num1			
+			
+			<where>
+				1=1
+			<if test="search_type =='user_id'.toString()"> /* 검색조건 */
+				AND cstm.COC_ID = #{search_value}
+			</if>	
+			<if test="search_type =='counselor_id'.toString()"> /* 검색조건 */
+				AND memb.COC_ID = #{search_value}
+			</if>			
+			<if test="channel != null and channel != ''.toString()"> /* 채널 */
+				AND room.CSTM_LINK_DIV_CD = #{channel}
+			</if>		
+			<if test="start_date != null and start_date != ''.toString()"> /* 검색 시작 ~ 검색 종료 */
+				AND room.ROOM_CREATE_DT between to_date(#{start_date}, 'yyyymmdd') and to_date(#{end_datetime}, 'yyyymmdd')
+			</if>			
+			</where>
+		ORDER BY cstm.COC_ID
+		) t
+		where rnum between ((#{page_no})*1 - 1) * (#{page_size}*1) + 1 and ((#{page_no})*1) * (#{page_size}*1)
+	</select>
+
+	<!-- CBCLS002 인터페이스 서비스이용내역 조회 -->
+	<select id="CBCLS002" resultType="CMap">
+		/* DEPRECATED member.CBCLS002 */
+		SELECT * FROM (
+			select
+				
+				 B.cnsr_div_cd as chat_type                      /* 업무구분 */
+				,shfda.fn_getcodenm('SERVICE_ID', B.INTERFACE_ID) hk_title	/* 서비스 이용내역 */
+				,shfda.fn_getcodenm('AUTH_POSITION_CD', C.AUTH_POSITION) AS hk_cert_channel /* 인증채널 */
+				,shfda.fn_getcodenm('AUTH_TYPE_CD', C.AUTH_TYPE) AS hk_cert			 /* 인증방식 */
+				,B.reqdt AS hk_datetime			    /* 기간계 호출 일시 */
+				,room.CHAT_ROOM_UID chat_room_uid   /* 채팅방ID */
+				,cstm.COC_ID user_id                   /* 고객ID */
+				,room.CSTM_LINK_DIV_CD channel	  /* 채널 */
+				,room.ROOM_CREATE_DT start_datetime /* 상담시작시간 */
+				,room.ROOM_END_DT  end_datetime    /* 상담종료시간 */
+				,memb.COC_ID  counselorNo      /* 상담원번호 */
+				,memb.NAME  counselorNm              /* 상담원명 */
+				,room.CSTM_UID  cstm_uid           /* 해피톡생성 고객 key */
+				,cstm.CSTM_LINK_CUSTOMER_UID  channel_customer_id      /* 채널별 고객 key */			
+				,cstm.NAME  user_nm                  /* 고객명 */
+				,room.CSTM_OS_DIV_CD  device    /* 고객기기 */
+				,row_number() over(order by cstm.COC_ID) as rnum				
+			from shfda.tb_CHAT_ROOM room
+			left join shfda.tb_CHAT_CSTM_INFO cstm
+			on room.cstm_uid = cstm.cstm_uid
+			left join shfda.tb_MEMBER_INFO memb
+			on room.MEMBER_UID = memb.MEMBER_UID		
+			left join shfda.tb_CNS_EVL evl
+			on room.CHAT_ROOM_UID = evl.CHAT_ROOM_UID	
+			left join shfda.tb_CHAT_END_INFO end
+			on room.CHAT_ROOM_UID = end.CHAT_ROOM_UID	
+			left join shfda.tb_CHAT_CSTM_INFO A
+			on room.cstm_uid = A.CSTM_UID
+			left join shfda.tb_HK_MCI_LOGS B
+			on  A.CSTM_LINK_DIV_CD = B.CHANNEL
+			AND A.CSTM_LINK_CUSTOMER_UID = B.UUID
+			left join shfda.tb_CERTIFICATION C
+			on  A.CSTM_LINK_DIV_CD = C.CHANNEL
+			AND A.CSTM_LINK_CUSTOMER_UID = C.UUID
+			
+			<where>
+				1=1
+			<if test="search_type =='user_id'.toString()"> /* 검색조건 */
+				AND cstm.COC_ID = #{search_value}
+			</if>	
+			<if test="search_type =='counselor_id'.toString()"> /* 검색조건 */
+				AND memb.COC_ID = #{search_value}
+			</if>			
+			<if test="channel != null and channel != ''.toString()"> /* 채널 */
+				AND room.CSTM_LINK_DIV_CD = #{channel}
+			</if>		
+			<if test="start_date != null and start_date != ''.toString()"> /* 검색 시작 ~ 검색 종료 */
+				AND room.ROOM_CREATE_DT between to_date(#{start_date}, 'yyyymmdd') and to_date(#{end_datetime}, 'yyyymmdd')
+			</if>			
+			</where>
+		ORDER BY cstm.COC_ID
+		) t
+		where rnum between ((#{page_no})*1 - 1) * (#{page_size}*1) + 1 and ((#{page_no})*1) * (#{page_size}*1)
+	</select>	
+	
+	<!-- 후처리 완료되지 않은 방 갯수 count -->
+	<select id="selectChatRoomEndMemoEmptyCount" resultType="Int">
+		select count(1)
+          from shfda.tb_chat_end_info t1 left outer join shfda.tb_chat_room t2 on t1.chat_room_uid = t2.chat_room_uid 
+          where t2.member_uid = #{member_uid} and t2.room_create_dt >= trunc(sysdate - 1) and t1.updater is null
+		<!-- select count(1)
+          from shfda.tb_chat_room room left outer join shfda.tb_chat_end_info end on room.chat_room_uid = end.chat_room_uid
+          where member_uid = #{member_uid} and room_create_dt >= trunc(sysdate - 1) and end.updater is null -->
+	</select>
+	
+	<!-- 부서 리스트 조회 -->
+	<select id="selectDepartList" resultType="CMap">
+		/* member.selectDepartList */
+		select cd as depart_cd, cd_nm as depart_nm from shfda.tb_cd
+		where cd_group = 'DEPART_CD'
+	</select>
+	
+	<select id="selectCountRoomByCounselor" resultType="Cmap">
+		/* member.selectCountRoomByCounselor */
+		SELECT 
+			nvl((select count(*) from shfda.tb_chat_room where member_uid = '1000000003' and end_yn = 'N'), 0) AS room_cnt
+			, nvl((SELECT tmi.CNSR_MAX_CNT FROM shfda.tb_MEMBER_INFO tmi WHERE MEMBER_UID = '1000000003'), 0) AS cnsr_max_cnt
+		FROM DUAL
+
+	</select>
+</mapper>

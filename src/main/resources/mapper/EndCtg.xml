@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="endCtg">
+
+	<!-- 카테고리 목록 조회 -->
+	<select id="selectCategory" resultType="CMap">
+		/* endCtg.selectCategory */
+		select ctg_num
+			 , upper_ctg_num
+			 , ctg_nm
+			 , ctg_dpt
+			 , dft_ctg_yn
+			 , cstm_yn
+			 , del_yn
+			 , to_char(create_dt, 'YYYY-MM-DD') as create_dt
+			 , creater
+			 , to_char(update_dt, 'YYYY-MM-DD') as update_dt
+			 , updater
+			 , depart_cd
+			 , use_yn
+			 , cstm_link_div_cd
+		from shfda.tb_end_ctg_info
+		<where>
+			<if test="ctgNum != null">
+			and ctg_num = #{ctgNum}
+			</if>
+			<if test="upperCtgNum != null">
+			and upper_ctg_num = #{upperCtgNum}
+			</if>
+			<if test="ctgDpt != null">
+			and ctg_dpt = #{ctgDpt}
+			</if>
+			<if test='departCd != null'>
+			and depart_cd = #{departCd}
+			</if>
+			<if test="dftCtgYn != null">
+			and dft_ctg_yn = #{dftCtgYn}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+			<if test="keyword != null">
+			and ( ctg_nm like #{keyword} )
+			</if>		
+			<if test="delYn != null">
+			and delYn = #{delYn}
+			</if>				
+			<if test="delYn == null">
+			and del_yn = 'N'
+			</if>					
+		</where>
+		order by depart_cd asc, ctg_nm asc
+	</select>
+	
+	<insert id="insertCategory">
+		/* endCtg.insertCategory */
+		<selectKey keyProperty="ctgNum" order="BEFORE" resultType="String">
+			select shfda.seq_END_CTG_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_end_ctg_info
+		(
+		ctg_num
+		, upper_ctg_num
+		, ctg_nm
+		, ctg_dpt
+		, dft_ctg_yn
+		, depart_cd
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, use_yn
+		)
+		values
+		(
+		#{ctgNum}
+		, #{upperCtgNum}
+		, #{ctgNm}
+		, #{ctgDpt}
+		, 'N'
+		, #{departCd}
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, #{useYn}
+		)
+	</insert>
+
+	<update id="updateCategory">
+		/* endCtg.updateCategory */
+		update shfda.tb_end_ctg_info
+		set ctg_nm    = #{ctgNm}
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		  , use_yn		=	#{useYn}
+		where ctg_num = #{ctgNum}
+	</update>
+
+	<update id="deleteCategory">
+		/* endCtg.deleteCategory */
+		update shfda.tb_end_ctg_info
+		set del_yn    = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where ctg_num = #{ctgNum}
+	</update>
+
+</mapper>

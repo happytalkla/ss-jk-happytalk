@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="batch">
+
+	<select id="selectCstmSinfo" resultType="CMap">
+		/* batch.selectCstmSinfo */
+		select *
+		from shfda.tb_cstm_sinfo
+		where
+			create_dt &lt;= to_date(#{createDt}, 'yyyymmdd_hh24miss')
+	</select>
+
+	<update id="updateCstmSinfo">
+		/* batch.updateCstmSinfo */
+		update
+		shfda.tb_cstm_sinfo
+		<set>
+			use_yn = 'Y',
+			<if test="telNo1 != null">
+			tel_no1 = #{telNo1},
+			</if>
+			<if test="telNo2 != null">
+			tel_no2 = #{telNo2},
+			</if>
+			<if test="telNo3 != null">
+			tel_no3 = #{telNo3},
+			</if>
+			<if test="accountNo != null">
+			account_no = #{accountNo},
+			</if>
+			<if test="etc != null">
+			etc = #{etc},
+			</if>
+			<if test="cardNo1 != null">
+			card_no1 = #{cardNo1},
+			</if>
+			<if test="cardNo2 != null">
+			card_no2 = #{cardNo2},
+			</if>
+			<if test="cardNo3 != null">
+			card_no3 = #{cardNo3},
+			</if>
+			<if test="cardNo4 != null">
+			card_no4 = #{cardNo4},
+			</if>
+		</set>
+		where
+			chat_room_uid = #{chatRoomUid}
+	</update>
+
+	<select id="selectEndMemo" resultType="CMap">
+		/* batch.selectEndMemo */
+		select *
+		from shfda.tb_chat_end_info
+		where
+			memo is not null
+			<if test="createDt != null and createDt != ''.toString">
+			and create_dt &lt;= to_date(#{createDt}, 'yyyymmdd_hh24miss')
+			</if>
+	</select>
+
+	<update id="updateEndMemo">
+		/* batch.updateEndMemo */
+		update
+		shfda.tb_chat_end_info
+		<set>
+			update_dt = sysdate,
+			<if test="memo != null">
+			memo = #{memo},
+			</if>
+		</set>
+		where
+			chat_room_uid = #{chatRoomUid}
+	</update>
+
+	<select id="selectChatRoomForBSP" resultType="CMap">
+		/* batch.selectChatRoomForBSP */
+		select *
+		from shfda.tb_chat_room
+		where
+			room_end_dt &gt; to_date(#{startDate}, 'yyyymmdd_hh24miss')
+			<if test="endDate != null">
+			and room_end_dt &lt; to_date(#{endDate}, 'yyyymmdd_hh24miss')
+			</if>
+			and chat_room_status_cd = '91'
+	</select>
+
+	<select id="selectBatchJob" resultType="CMap">
+		/* SECRET batch.selectBatchJob */
+		select * from shfda.tb_batch_job
+	</select>
+
+	<select id="updateBatchJob" resultType="CMap">
+		/* SECRET batch.updateBatchJob */
+		update shfda.tb_batch_job
+		set
+			start_yn = #{startYn}
+	</select>
+	
+	<select id="selectTermRank" resultType="CMap">
+		/* batch.selectTermRank */
+		SELECT T.*, RANK() OVER (ORDER BY cnt desc) as ranking
+		FROM (
+				SELECT search_text, count(1) AS cnt
+				FROM shfda.tb_TERM_LOG ttl 
+				<if test="type != null and type eq 'A'.toString()">
+					WHERE search_cnt = 0
+				</if>
+				<if test="type != null and type eq 'B'.toString()">
+					WHERE search_cnt <![CDATA[>]]>  0
+				</if>
+				<if test="termType != null and termType eq 'D'.toString()">
+					AND TO_CHAR(search_date,'yyyymmdd') = #{jobDt}
+				</if>
+				<if test="termType != null and termType eq 'M'.toString()">
+					AND TO_CHAR(search_date,'yyyymm') = #{jobDt}
+				</if>
+				
+				GROUP BY search_text 
+				ORDER BY cnt DESC
+			) T
+		 
+	</select>
+	
+	<insert id="insertTermRankDay">
+		/* batch.insertTermRankDay */
+		INSERT INTO shfda.tb_term_batch_day
+		values
+		(
+		#{ranking}
+		, #{search_text}
+		, sysdate
+		, #{type}
+		, #{jobDt}
+		)
+	</insert>
+	
+	<insert id="insertTermRankMon">
+		/* batch.insertTermRankMon */
+		INSERT INTO shfda.tb_term_batch_mon
+		values
+		(
+		#{ranking}
+		, #{search_text}
+		, sysdate
+		, #{type}
+		, #{jobDt}
+		)
+	</insert>
+	
+	<delete id="deleteTermRankDay">
+		/* batch.deleteTermRankDay */
+		delete from shfda.tb_term_batch_day
+		where job_dt = #{jobDt} and type =  #{type}
+	</delete>
+	
+	<delete id="deleteTermRankMon">
+		/* batch.deleteTermRankMon */
+		delete from shfda.tb_term_batch_mon
+		where job_dt = #{jobDt} and type =  #{type}
+	</delete>
+	
+</mapper>

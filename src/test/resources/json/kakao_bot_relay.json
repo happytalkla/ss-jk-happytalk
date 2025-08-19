@@ -1,0 +1,49 @@
+ {
+	"channelId": 2,
+	"channelServiceId": "306afe8cc26a7a4dbc0a42d7b7f041b6d9d9ab02",
+	"channelCustomerId": "eZV5udfX1-1o",
+	"chatContents":{"v":"0.1","balloons":[{"sections":[{"type":"text","data":""}]}]},
+	"botChatContentsList": [
+		{
+			"v": "0.1",
+			"balloons": [
+				{
+					"sections": [
+						{
+							"type": "file",
+							"data": "http://k.kakaocdn.net/dn/cOhAXT/btqz04NJIgZ/EkNzSl1gqhtxeU4ffFkDj0/2x1.jpg",
+							"display": "image/png"
+						},
+						{
+							"type": "text",
+							"data": "안녕하세요~!\n삼성증권\"흥미봇\" 입니다.\n원하시는 서비스를 시작해보세요~"
+						},
+						{
+							"type": "action",
+							"actions": [
+								{
+									"type": "message",
+									"name": "챗봇 서비스",
+									"data": "챗봇 서비스",
+									"extra": "OpenBuilder/Block/5d887de492690d0001687566"
+								},
+								{
+									"type": "message",
+									"name": "계약조회/>수납/변경 서비스",
+									"data": "계약조회/수납/변경 서비스",
+									"extra": "OpenBuilder/Block/5dde0425b617ea0001cadee1"
+								},
+								{
+									"type": "message",
+									"name": "챗봇과 대화하기 (FAQ)",
+									"data": "챗봇과 대화하기 (FAQ)",
+									"extra": "OpenBuilder/Block/5d8d684affa7480001517eb5"
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

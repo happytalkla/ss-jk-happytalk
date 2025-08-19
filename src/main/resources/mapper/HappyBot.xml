@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="happyBot">
+
+	<resultMap id="clobCMap" type="CMap">
+		<result property="cont" column="cont" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+	</resultMap>
+
+	<select id="selectBotBlock" resultMap="clobCMap">
+		/* happyBot.selectBotBlock */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select 
+			 id,
+		    auto_block_id,
+		    auto_call_api_url,
+		    cont,
+		    default_actions_use_yn,
+		    default_condition_block_id,
+		    deletable_yn,
+		    deploy_yn,
+		    end_category_id,
+		    fallback_block_id,
+		    intent,
+		    modified,
+		    modifier,
+		    name,
+		    scenario_id,
+		    skill_display_type,
+		    skill_id,
+		    trigger_code,
+		    type,
+		    use_yn,
+		    orient
+		from shfda.tb_bot_block
+		<where>
+			<if test="id != null">
+				AND id = #{id}
+			</if>
+			<if test="triggerCode != null">
+				AND trigger_code = #{triggerCode}
+			</if>
+		</where>
+	</select>
+
+	<insert id="insertHappybotAuthCode">
+		/* happyBot.insertHappybotAuthCode */
+		insert into shfda.tb_auth_code
+		(
+			code
+			, expire_dt
+		)
+		values
+		(
+			#{code}
+			, sysdate + ${expiredMinutes} / (24 * 60)
+		)
+	</insert>
+
+	<select id="selectBotSession" resultType="CMap">
+		/* happyBot.selectBotSession */
+		select     
+			id,
+		    context,
+		    device_type,
+		    fallback_yn,
+		    first_block_id,
+		    last_green_block_id,
+		    last_green_condition_block_id,
+		    prev_green_block_id,
+		    scenario_id,
+		    session_type,
+		    simulation_yn,
+		    trigger_code
+		from shfda.tb_bot_session
+		where
+			id = #{id}
+	</select>
+	
+	<select id="selectGreetingBotBlock" resultType="CMap">
+		/* happyBot.selectGreetingBotBlock */
+		select     
+			ID,
+		    CODE,
+		    DESCRIPTION,
+		    FALLBACK_BLOCK_ID,
+		    FIRST_BLOCK_ID,
+		    MODIFIER,
+		    NAME,
+		    SORT,
+		    USE_FIRST,
+		    USE_PREV,
+		    USE_YN,
+		    CSTM_LINK_DIV_CD
+		from shfda.tb_bot_scenario
+		where CSTM_LINK_DIV_CD = #{code}
+			
+	</select>
+</mapper>

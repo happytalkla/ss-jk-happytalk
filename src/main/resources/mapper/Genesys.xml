@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="genesys">
+
+
+	<resultMap id="clobCMap" type="CMap">
+		<result property="cont_text" column="cont_text" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+	</resultMap>
+	
+    <!-- IPCC_ADV 고객여정 I/F 결과 조회 -->
+    <select id="selectIfResult" resultType="CMap">
+        /* genesys.selectIfResult */
+        SELECT tir.id            AS id
+             , tir.type          AS type
+             , tir.chat_room_uid AS chat_room_uid
+             , tir.url           AS url
+             , tir.parameter     AS parameter
+             , tir.start_dt      AS start_dt
+             , tir.end_dt        AS end_dt
+             , tir.success_yn    AS success_yn
+             , tir.response      AS response
+             , tir.resend_cnt    AS resend_cnt
+          FROM shfda.tb_if_result tir
+         WHERE 1 = 1
+        <if test="id != null and id != ''">
+           AND tir.id = #{id}
+        </if>
+        <if test="type != null and type != ''">
+           AND tir.type = #{type}
+        </if>
+        <if test="chatRoomUid != null and chatRoomUid != ''">
+           AND tir.chat_room_uid = #{chatRoomUid}
+        </if>
+        <if test="successYn != null and successYn != ''">
+           AND tir.success_yn = #{successYn}
+        </if>
+    </select>
+
+    <!-- IPCC_ADV 고객여정 I/F 다음 ID 조회 -->
+    <select id="selectIfResultNextId" resultType="Long">
+        SELECT shfda.seq_tb_if_result_id.nextval
+          FROM dual
+    </select>
+
+    <!-- IPCC_ADV 고객여정 I/F 등록(시작시) -->
+    <insert id="insertIfResultForStart">
+        /* genesys.insertIfResult */
+        INSERT INTO shfda.tb_if_result (
+              id
+            , type
+            , seq
+            , chat_room_uid
+            , prce_sect_code
+            , url
+            , parameter
+            , start_dt
+            , resend_cnt
+        ) VALUES (
+              #{id}
+            , #{type}
+            , #{seq}
+            , #{chatRoomUid}
+            , #{sectCode}
+            , #{url}
+            , #{parameter}
+            , SYSDATE
+            , 0
+        )
+    </insert>
+
+    <!-- IPCC_ADV 고객여정 I/F 수정(종료시) -->
+    <update id="updateIfResultForEnd">
+        /* genesys.updateIfResultForEnd */
+        UPDATE shfda.tb_if_result
+           SET parameter  = #{parameter}
+             , end_dt     = SYSDATE
+             , success_yn = #{successYn}
+             , response   = #{response}
+         WHERE id = #{id}
+           AND type = #{type}
+    </update>
+
+    <!-- IPCC_ADV 고객여정 I/F 수정(재전송시) -->
+    <update id="updateIfResultForResend">
+        /* genesys.updateIfResultForResend */
+        UPDATE shfda.tb_if_result
+           SET parameter  = #{parameter}
+             , start_dt   = SYSDATE
+             , resend_cnt = NVL(resend_cnt, 0) + 1
+         WHERE id = #{id}
+           AND type = #{type}
+    </update>
+    
+    <!-- IPCC_ADV 고객여정 실패 목록 조회 -->
+    <select id="selectFailedList" resultType="CamelMap">
+        /* genesys.selectFailedList */
+        SELECT ir.id                                                       AS id
+             , ir.type                                                     AS type
+             , ir.seq                                                      AS seq
+             , ir.chat_room_uid                                            AS chat_room_uid
+             , ir.prce_sect_code                                           AS prce_sect_code
+             , ir.prce_sect_code                                           AS sect_code
+             , ir.url                                                      AS url
+             , ir.parameter                                                AS parameter
+             , ir.start_dt                                                 AS start_dt
+             , ir.end_dt                                                   AS end_dt
+             , ir.success_yn                                               AS success_yn
+             , ir.response                                                 AS response
+             , ir.resend_cnt                                               AS resend_cnt
+             , cr.cstm_link_div_cd                                         AS cstm_link_div_cd
+             , shfda.fn_getcodenm('CSTM_LINK_DIV_CD', cr.cstm_link_div_cd) AS cstm_link_div_cd_nm
+             , DECODE(cr.coc_id, '미로그인', '', cr.coc_id)                AS coc_id
+             , DECODE(cr.coc_id, '미로그인', '', cr.coc_id)                AS entity_id
+             , (SELECT mi.name
+                  FROM shfda.tb_member_info mi
+                 WHERE mi.member_uid = cr.member_uid)                      AS cnsr_nm
+             , cei.cnsl_prhs_id                                            AS cnsl_prhs_id
+             , cei.cnsl_prhs_id                                            AS mca_num
+             , cei.dep_1_ctg_cd                                            AS dep_1_ctg_cd
+             , cei.dep_1_ctg_nm                                            AS dep_1_ctg_nm
+             , cei.dep_2_ctg_cd                                            AS dep_2_ctg_cd
+             , cei.dep_2_ctg_nm                                            AS dep_2_ctg_nm
+             , cei.dep_3_ctg_cd                                            AS dep_3_ctg_cd
+             , cei.dep_3_ctg_nm                                            AS dep_3_ctg_nm
+             , cei.memo                                                    AS memo
+             , NVL((SELECT JSON_VALUE(ir3.response, '$.customer_id')
+                      FROM tb_if_result ir3
+                     WHERE ir3.id = ir.id
+                       AND ir3.type = 'CUSTOMER_SEARCH')
+                  , (SELECT JSON_VALUE(ir3.response, '$.customer_id')
+                      FROM tb_if_result ir3
+                     WHERE ir3.id = ir.id
+                       AND ir3.type = 'CUSTOMER_CREATE'))                  AS customer_id
+             , NVL((SELECT '신규'
+                      FROM tb_if_result ir3
+                     WHERE ir3.id = ir.id
+                       AND ir3.type = 'CUSTOMER_CREATE'), '기존')          AS cstm_type
+             , (SELECT JSON_VALUE(ir3.response, '$.service_id')
+                  FROM tb_if_result ir3
+                 WHERE ir3.id = ir.id
+                   AND ir3.type = 'SERVICE_START')                         AS service_id
+             , (SELECT JSON_VALUE(ir3.response, '$.state_id')
+                  FROM tb_if_result ir3
+                 WHERE ir3.id = ir.id
+                   AND ir3.type = 'STATE_START')                           AS state_id
+             , (SELECT JSON_VALUE(ir3.response, '$.task_id')
+                  FROM tb_if_result ir3
+                 WHERE ir3.id = ir.id
+                   AND ir3.type = 'TASK_START')                            AS task_id
+          FROM tb_if_result ir
+          JOIN tb_chat_room cr
+            ON cr.chat_room_uid = ir.chat_room_uid
+          LEFT JOIN tb_chat_end_info cei
+            ON cei.chat_room_uid = cr.chat_room_uid
+         WHERE ir.success_yn = 'N'
+    </select>
+    
+    <!-- IPCC_ADV 고객여정 고객 채팅 내역 조회 -->
+    <select id="selectChatList" resultMap="clobCMap">
+        /* genesys.selectChatList */
+        SELECT to_char(reg_dt,'yyyy-mm-dd hh24:mi:ss') as reg_dt, cont_text
+          FROM shfda.tb_chat
+         WHERE sender_div_cd = 'U'
+           AND chat_room_uid = #{chatRoomUid}
+         ORDER BY reg_dt DESC
+    </select>
+        
+    <!-- IPCC_IST 통합통계 목록 조회 -->
+    <select id="selectIstList" resultType="String">
+        /* genesys.selectIstList */
+        SELECT mi.coc_id || '|'
+            || SUM(NVL(ss.cnsr_end_cnt, 0)) || '|'
+            || SUM(NVL(ss.chat_total_time, 0))      AS data
+          FROM shfda.tb_member_info mi
+          LEFT JOIN shfda.tb_stats_sqi ss
+            ON ss.member_uid = mi.member_uid
+           AND ss.stats_date = #{strDate}
+         WHERE mi.member_div_cd IN ('M', 'C')
+         GROUP BY mi.coc_id
+    </select>
+</mapper>

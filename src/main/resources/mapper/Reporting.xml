@@ -1,0 +1,1859 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="reporting">
+
+	<select id="selectMonthlyBasicStatcs" resultType="CMap">
+		/* reporting.selectMonthlyBasicStatcs  - 월간 basicList */
+		select 
+			sum(nvl(CNS_REQUEST_CNT, 0))                                                						as CNS_REQUEST_CNT
+			, sum(nvl(CNS_quit_CNT, 0))                                                     					as CNS_quit_CNT
+			, sum(nvl(CNS_BQUIT_CNT, 0))                                                       					as CNS_BQUIT_CNT
+			, sum(nvl(SYS_FULL_CNT, 0))                                                       					as SYS_FULL_CNT
+			, sum(nvl(cns_end_auto, 0))                                                        					as cns_end_auto
+			, sum(nvl(cns_end_cstm, 0))                                                         					as cns_end_cstm
+			, sum(nvl(cns_end_cnsr, 0))                                                          					as cns_end_cnsr
+			, sum(nvl(CNS_end_CNT, 0))                                                          					as CNS_end_CNT
+			, sum(round(nvl(evl_end_time, 0), 1))                                                					as evl_end_time
+			, nvl(floor(sum(evl_end_time) / sum(nvl(CNS_end_CNT, 0)) / 86400), 0)                                          					as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(nvl(CNS_end_CNT, 0)), 86400)), 'SSSSS'), 'HH24'), '00') 					as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(nvl(CNS_end_CNT, 0)), 86400)), 'SSSSS'), 'mi'), '00')   					as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(nvl(CNS_end_CNT, 0)), 86400)), 'SSSSS'), 'ss'), '00')   					as avg_end_sec
+			, round(sum(nvl(CNS_end_CNT, 0)) / sum(cnsr_cnt), 1)													as avg_end_cnt
+			, sum(cnsr_cnt) / sum(work_day_yn)																		as cnsr_cnt
+			, sum(OUT_SERVICE_CNT)																					as OUT_SERVICE_CNT
+					from (
+				 select sum(CNS_REQUEST_CNT)                                         	as CNS_REQUEST_CNT
+				 		, sum(CNS_quit_CNT)                                             as CNS_quit_CNT
+				 		, sum(CNS_BQUIT_CNT)                                            as CNS_BQUIT_CNT
+				 		, sum(SYS_FULL_CNT)                                             as SYS_FULL_CNT
+				 		, sum(cns_end_auto)												AS cns_end_auto
+				 		, sum(cns_end_cstm)												AS cns_end_cstm
+				 		, sum(cns_end_cnsr)												AS cns_end_cnsr
+					  	, sum(CNS_end_CNT)                                             	as CNS_end_CNT
+					  	, sum(evl_end_time)  											as evl_end_time
+					  	, CASE WHEN max(cnsr_cnt) > 0 THEN 1 ELSE 0 END 				as work_day_yn
+					  	, sum(OUT_SERVICE_CNT) 											as OUT_SERVICE_CNT
+					  	, (SELECT max(cnsr_cnt) FROM shfda.tb_stats_date WHERE REG_DATE = a.REG_DATE
+					  	 <if test="departCd != null and departCd != ''">
+							and depart_cd = #{departCd}
+						</if>
+					  	)                                                as cnsr_cnt
+				 from shfda.tb_STATS_DATE a
+				 where reg_date between #{startDate} and #{endDate}
+				<if test="departCd != null and departCd != ''">
+					and depart_cd = #{departCd}
+				</if>
+				<choose>
+					<when test="linkCd != null">
+					and a.cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				  and a.cnsr_div_cd = 'C'
+				 GROUP BY REG_DATE
+			 )
+	</select>
+	<select id="selectMonthlyBasicKakao" resultType="CMap">
+		/* reporting.selectMonthlyBasicKakao  - 월간 basicList - kakao */
+		SELECT nvl(count(*), 0) AS kakao_div_cnt
+		FROM 
+			shfda.tb_chat_room 
+		WHERE 
+			CSTM_LINK_DIV_CD = 'B' 
+			AND ROOM_CREATE_DT >= TO_DATE(#{startDate}, 'yyyymmdd') 
+			AND ROOM_CREATE_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+			AND TO_NUMBER(MEMBER_UID) <![CDATA[<]]> 1999999991
+	</select>
+	
+	
+	<select id="selectMonthlyDayStatcs" resultType="CMap">
+		/* reporting.selectMonthlyDayStatcs  - 월간 - 일자별 추이*/
+		select
+			b.day as day
+			, sum(nvl(a.cns_request_cnt,0)) 																as cns_request_cnt
+			, sum(nvl(a.cns_end_cnt,0)) 																	as cns_end_cnt
+			, sum(nvl(a.cns_quit_cnt + a.CNS_BQUIT_CNT + a.SYS_FULL_CNT, 0))								as cns_quit_cnt
+			, sum(nvl(a.CNS_BQUIT_CNT, 0))																	as CNS_BQUIT_CNT
+			, sum(nvl(a.cns_quit_cnt, 0))																	as cns_aquit_cnt
+			, sum(nvl(a.SYS_FULL_CNT, 0))																	as SYS_FULL_CNT
+			, sum(nvl(a.OUT_SERVICE_CNT, 0))																as OUT_SERVICE_CNT
+			, sum(nvl(a.cns_end_auto, 0))																	as cns_end_auto
+			, sum(nvl(a.cns_end_cnsr, 0))																	as cns_end_cnsr
+			, sum(nvl(a.cns_end_cstm, 0))																	as cns_end_cstm
+			, nvl(floor(sum(evl_end_time)/sum(cns_end_cnt)/86400),0) 										as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt), 86400)), 'SSSSS'), 'HH24'), '00')		as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt),86400)),'SSSSS'),'mi'),'00') 				as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt),86400)),'SSSSS'),'ss'),'00') 				as avg_end_sec
+			, round(nvl(sum(evl_end_time) / decode(sum(cns_end_cnt),0,null,sum(cns_end_cnt)),0),1)						as avg_end_time_excel
+			, round(nvl(sum(cns_end_cnt) 
+					/ decode(max(a.cnsr_cnt),0,null,max(a.cnsr_cnt)),0),1)									as avg_end_cnt
+			, nvl(max(a.cnsr_cnt), 0)  									as cnsr_cnt
+		from
+		(
+			select 
+				to_date(REG_DATE, 'yyyy-mm-dd') as day
+				,cnsr_div_cd
+				,cstm_link_div_cd
+				,cns_request_cnt
+				,cns_end_cnt
+				,cns_quit_cnt
+				,cns_end_auto
+				,cns_end_cnsr
+				,cns_end_cstm
+				,case when evl_end_time <![CDATA[<]]> 0 then evl_end_time *-1 else evl_end_time end as evl_end_time
+				,cnsr_cnt
+				, CNS_BQUIT_CNT
+				, SYS_FULL_CNT
+				, OUT_SERVICE_CNT
+			from shfda.tb_stats_date
+			where
+				reg_date >= #{startDate}
+				and reg_date <![CDATA[<]]>=#{endDate}
+				and cnsr_div_cd = 'C'
+				<if test="departCd != null and departCd != ''">
+					and depart_cd = #{departCd}
+				</if>
+				<choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+		) a
+		,
+		(
+			select
+				to_char(to_date(#{startDate},'yyyymmdd')+level-1,'yyyy-mm-dd') as day
+			from dual
+			connect by level <![CDATA[<]]>= ( to_date(#{endDate},'yyyymmdd') - to_date(#{startDate},'yyyymmdd')+1)
+		) b
+		where a.day(+) = b.day
+		group by b.day
+		<if test="linkCd != null">
+			,cstm_link_div_cd
+		</if>
+		order by b.day
+	</select>
+
+	<select id="selectMonthlyWeekStatcs" resultType="CMap">
+		/* reporting.selectMonthlyWeekStatcs - 월간 - 요일별통계 */
+		select
+			b.lv
+			, b.day 																	as day
+			, sum(nvl(a.cns_request_cnt,0)) 											as cns_request_cnt
+			, sum(nvl(a.OUT_SERVICE_CNT,0)) 											as OUT_SERVICE_CNT
+			, sum(nvl(a.cns_end_cnt,0)) 												as cns_end_cnt
+			, round(nvl(sum(evl_end_time) / decode(count(1),0,null,count(1)),0),1) 		as avg_end_time_excel
+			, nvl(floor(sum(evl_end_time)/sum(a.cns_end_cnt)/86400),0) 					as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(a.cns_end_cnt),86400)),'SSSSS'),'HH24'),'00') 		as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(a.cns_end_cnt),86400)),'SSSSS'),'mi'),'00') 		as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(a.cns_end_cnt),86400)),'SSSSS'),'ss'),'00') 		as avg_end_sec
+			, round(nvl(sum(cns_end_cnt) / decode(sum(cnsr_cnt),0,null,sum(cnsr_cnt)),0),1) 						as avg_end_cnt
+			, sum(nvl(a.CNS_QUIT_CNT+a.CNS_BQUIT_CNT+a.SYS_FULL_CNT,0)) 				as CNS_QUIT_CNT
+			, sum(nvl(a.CNS_BQUIT_CNT,0)) 												as CNS_BQUIT_CNT
+			, sum(nvl(a.CNS_QUIT_CNT,0)) 												as CNS_AQUIT_CNT
+			, sum(nvl(a.SYS_FULL_CNT,0)) 												as SYS_FULL_CNT
+			, nvl(sum(a.cnsr_cnt)/count(1), 0)											as cnsr_cnt
+		from
+			(
+				select
+					reg_daycount as day
+					, sum(cns_request_cnt) 		AS cns_request_cnt
+					, sum(cns_end_cnt)			AS cns_end_cnt
+					, sum(evl_end_time) 		AS evl_end_time
+					, max(cnsr_cnt) 			AS cnsr_cnt 
+					, sum(cns_quit_cnt)			AS cns_quit_cnt
+					, sum(OUT_SERVICE_CNT)		AS OUT_SERVICE_CNT
+					, sum(SYS_FULL_CNT)			AS SYS_FULL_CNT
+					, sum(CNS_BQUIT_CNT)		AS CNS_BQUIT_CNT
+					, reg_date
+				from shfda.tb_stats_date
+				where
+					reg_date >= #{startDate}
+					and reg_date <![CDATA[<]]>=#{endDate}
+					<if test="departCd != null and departCd != ''">
+						and depart_cd = #{departCd}
+					</if>
+					and cnsr_div_cd = 'C'
+
+					<if test="cstm_link_div_cd_week != null">
+						and cstm_link_div_cd = #{cstm_link_div_cd_week}
+					</if>
+					<choose>
+						<when test="linkCd != null">
+						and cstm_link_div_cd in
+							<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+								#{item}
+							</foreach>
+						</when>
+					</choose>
+				GROUP BY REG_DATE, reg_daycount
+				<if test="linkCd != null">
+				,cstm_link_div_cd
+			</if>
+			) a
+			,
+			(
+				select
+					case when level = 7 then	0	else	level	end as lv
+					,to_char(trunc(sysdate,'IW')+level-1,'DAY') as day
+				from dual
+				connect by level  <![CDATA[<]]>=7
+			) b
+			where a.day(+) = b.day
+			group by b.lv,b.day
+			order by b.lv
+	</select>
+
+	<select id="selectMonthlyAdviserStatcs" resultType="CMap">
+		/* reporting.selectMonthlyAdviserStatcs */
+		/* IPCC 상담 총 시간 포함*/
+		select
+			name
+			,shfda.fn_GETMANAGERNAME( a.MEMBER_UID) 																								as manager_name
+			,member_uid
+			<if test="member_uid != null">
+			, TO_char(TO_date(reg_date, 'yyyymmdd'),'yyyy-mm-dd') AS reg_date 
+			</if>
+			, nvl(sum(cns_request_cnt),0) 																							as cns_request_cnt
+			, nvl(sum(work_yn),0) 																										as work_yn
+			, nvl(sum(cns_end_cnt),0) 																								as cns_end_cnt
+			, nvl(sum(after_cnt), 0)																										as after_cnt
+			, round(sum(evl_end_time) / sum(cns_end_cnt), 1)																as evl_end_time
+			, nvl(floor(sum(evl_end_time)/sum(cns_end_cnt)/86400),0)				 										as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt),86400)),'SSSSS'),'HH24'),'00')		 		as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt),86400)),'SSSSS'),'mi'),'00') 					as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cns_end_cnt),86400)),'SSSSS'),'ss'),'00') 					as avg_end_sec
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time), 86400)), 'SSSSS'), 'HH24:mi:ss'), '00') 							as total_use_time
+			, round(sum(cns_end_cnt) / sum(work_yn),1)					 																				as avg_evl_end_cnt
+			, nvl(sum(evl_cnt),0) 																																as evl_cnt
+			, CASE WHEN nvl(sum(evl_evl_score), 0) > 0 AND nvl(sum(evl_cnt),0) > 0 THEN round((nvl(sum(evl_evl_score),0) / sum(evl_cnt)), 1) 
+				ELSE sum(evl_evl_score) END 																										as avg_evl_score
+			
+		from shfda.tb_STATS_CNSR a
+		where
+			reg_date >= #{startDate}
+			and reg_date <![CDATA[<]]>=#{endDate}
+			AND TO_NUMBER(member_uid) <![CDATA[<]]> '9999999991'
+			<if test="member_uid != null">
+				and member_uid = #{member_uid}
+			</if>
+			<if test="departCd != null and departCd != ''">
+				and depart_cd = #{departCd}
+			</if>
+		group by
+			name,member_uid
+			<if test="member_uid != null">
+				,reg_date
+				order by reg_date
+			</if>
+	</select>
+
+	<select id="selectCtgStatcs" resultType="CMap">
+		/* reporting.selectCtgStatcs  월간/일간 - 분류별통계*/
+		select
+			a.ctg_num
+			,replace(substr(ctg_path,2,point_2-point_1-1), '>>' , '')												as ctg1
+			,replace(substr(ctg_path,point_2+1,point_3-point_2), '>>' , '')				 						as ctg2
+			,replace(substr(ctg_path,point_3+2), '>>' , '') 																as ctg3
+			, sum(nvl(b.cns_request_cnt,0)) 																					as cns_request_cnt
+			, sum(nvl(b.cns_end_cnt,0))																 							as cns_end_cnt
+			, nvl(sum(evl_end_time)/sum(cnsr_cnt), 0)																	 						as avg_end_time_excel
+			, nvl(floor(sum(evl_end_time)/sum(cnsr_cnt)/86400),0)						 				as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cnsr_cnt),86400)),'SSSSS'),'HH24'),'00') 		as	avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cnsr_cnt),86400)),'SSSSS'),'mi'),'00') 		as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/sum(cnsr_cnt),86400)),'SSSSS'),'ss'),'00') 		as avg_end_sec
+			, round(nvl(sum(cns_end_cnt) / decode(sum(cnsr_cnt),0,null,sum(cnsr_cnt)),0),1) as avg_end_cnt
+			, sum(nvl(b.cnsr_cnt,0)) as cnsr_cnt
+			, sum(nvl(b.TOTAL_SCORE,0)) as total_score
+			, sum(nvl(b.EVL_CNT,0)) as total_evl_cnt
+			, round(nvl(sum(total_score) / decode(sum(EVL_CNT),0,null,sum(EVL_CNT)),0),1) AS avg_evl_score
+		from
+		(
+			select
+				ctg_num
+				, sys_connect_by_path(ctg_nm,' >> ')		 									as ctg_path
+				, instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,1) 					as point_1
+				, case instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,2)
+					when 0 then
+						length(sys_connect_by_path(ctg_nm,' >> '))+1
+					else
+						instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,2)
+				end																	as point_2
+				, case instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,3)
+					when 0 then
+						length(sys_connect_by_path(ctg_nm,' >> '))
+					else
+						instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,3) -1
+				end 																	as point_3
+				, instr(sys_connect_by_path(ctg_nm,' >> '),' >> ',1,3)
+			from shfda.tb_CTG_INFO
+			where use_yn = 'Y' and del_yn='N'
+				start with upper_ctg_num = 0
+				connect by prior ctg_num = upper_ctg_num
+		) a
+		,shfda.tb_STATS_CTG_DATE b
+		where
+			a.ctg_num = b.ctg_num
+			<if test="departCd != null and departCd != ''">
+				and b.depart_cd = #{departCd}
+			</if>
+			and a.point_3 > a.point_2
+			and b.reg_date >= #{startDate}
+			and b.reg_date <![CDATA[<]]>=#{endDate}
+			<choose>
+				<when test="linkCd != null">
+				and b.cstm_link_div_cd in
+					<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+						#{item}
+					</foreach>
+				</when>
+			</choose>
+		group by a.ctg_num
+			,substr(ctg_path,2,point_2-point_1-1)
+			,substr(ctg_path,point_2+1,point_3-point_2)
+			,substr(ctg_path,point_3+2)
+		order by substr(ctg_path,2,point_2-point_1-1)
+			,substr(ctg_path,point_2+1,point_3-point_2)
+			,substr(ctg_path,point_3+2)
+	</select>
+
+	<select id="selectCtgDept" resultType="CMap">
+		/* reporting.selectCtgDept */
+		select * 
+		from
+			shfda.tb_ctg_info a
+			,shfda.tb_stats_ctg_date b
+		where
+			a.ctg_num = b.ctg_num
+			and ctg_dpt = 3
+			and b.reg_date >= #{startDate}
+			and b.reg_date <![CDATA[<]]>=#{endDate}
+			<if test="cnsr_div_cd_ctg != null">
+				and cnsr_div_cd = #{cnsr_div_cd_ctg}
+			</if>
+			<if test="cstm_link_div_cd_ctg != null">
+				and cstm_link_div_cd = #{cstm_link_div_cd}
+			</if>
+			<choose>
+				<when test="linkCd != null">
+				and b.cstm_link_div_cd in
+					<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+						#{item}
+					</foreach>
+				</when>
+			</choose>
+	</select>
+
+	<select id="selectCtgMonthlyStatcs" resultType="CMap">
+		/* reporting.selectCtgMonthlyStatcs */
+		/* IPCC 상담 총 시간 포함*/
+		select
+			to_char(to_date(b.reg_date,'yyyymmdd'),'yyyy-mm-dd') as reg_date
+			, a.ctg_num
+			, substr(ctg_path,2,point_2-point_1-1)								as ctg1
+			, substr(ctg_path,point_2+1,point_3-point_2) 					as ctg2
+			, substr(ctg_path,point_3+2) 											as ctg3
+			, sum(nvl(b.cns_request_cnt,0)) 										as cns_request_cnt
+			, sum(nvl(b.cns_end_cnt,0)) 												as cns_end_cnt
+			, round(sum(nvl(evl_end_time,0))/60/60 , 1)					as avg_end_time
+			, nvl(floor(sum(evl_end_time)/count(evl_end_time)/86400),0) 																	as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'HH24'),'00') 	as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'mi'),'00') 			as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'ss'),'00') 			as avg_end_sec
+			, nvl(floor(sum(evl_end_time)/count(evl_end_time)/86400),0)||'일'
+				|| nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'HH24'),0)||'시'
+				|| nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'mi'),0) ||'분'
+				|| nvl(to_char(to_date(ceil(mod(sum(evl_end_time)/count(evl_end_time),86400)),'SSSSS'),'ss'),'0')||'초' as	avg_end_time_excel
+			, round(nvl(sum(cns_end_cnt) / decode(sum(cnsr_cnt),0,null,sum(cnsr_cnt)),0),1) as avg_end_cnt
+		, sum(nvl(b.cnsr_cnt,0)) as cnsr_cnt
+		from
+			(
+				select
+					ctg_num
+					, sys_connect_by_path(ctg_nm,'-') as ctg_path
+					, instr(sys_connect_by_path(ctg_nm,'-'),'-',1,1) as point_1
+					, case instr(sys_connect_by_path(ctg_nm,'-'),'-',1,2)	when 0 then
+						length(sys_connect_by_path(ctg_nm,'-'))+1
+					else
+						instr(sys_connect_by_path(ctg_nm,'-'),'-',1,2)
+					end as point_2
+					, case instr(sys_connect_by_path(ctg_nm,'-'),'-',1,3)
+					when 0 then
+						length(sys_connect_by_path(ctg_nm,'-'))
+					else
+						instr(sys_connect_by_path(ctg_nm,'-'),'-',1,3) -1
+					end as point_3
+					, instr(sys_connect_by_path(ctg_nm,'-'),'-',1,3)
+				from shfda.tb_CTG_INFO
+					start with upper_ctg_num = 0
+					connect by prior ctg_num = upper_ctg_num
+			) a
+			,shfda.tb_STATS_CTG_DATE b
+		where a.ctg_num = b.ctg_num
+			and b.reg_date >= #{startDate}
+			and b.reg_date <![CDATA[<]]>=#{endDate}
+			and b.ctg_num = #{ctgNum}
+			AND a.point_3 > a.point_2
+			and cnsr_div_cd = 'C'
+		<if test="cstm_link_div_cd_ctg != null">
+			and cstm_link_div_cd = #{cstm_link_div_cd}
+		</if>
+		<choose>
+			<when test="linkCd != null">
+			and b.cstm_link_div_cd in
+				<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+					#{item}
+				</foreach>
+			</when>
+		</choose>
+		group by a.ctg_num
+		,substr(ctg_path,2,point_2-point_1-1)
+		,substr(ctg_path,point_2+1,point_3-point_2)
+		,substr(ctg_path,point_3+2)
+		,reg_date
+	</select>
+
+	<select id="selectMonthlyAdviserStatcsGraph" resultType="CMap">
+		/* reporting.selectMonthlyAdviserStatcsGraph */
+		select name
+			 , member_uid
+			 , b.day                                                                       as reg_date
+			 , nvl(cns_request_cnt, 0)                                                     as cns_request_cnt
+			 , nvl(work_yn, 0)                                                             as work_yn
+			 , nvl(cns_end_cnt, 0)                                                         as cns_end_cnt
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'HH24'), '0') as evl_end_time
+			 , round(nvl(avg_evl_end_cnt, 0), 1)	                                   as avg_evl_end_cnt
+			 , nvl(evl_cnt, 0)                                                             as evl_cnt
+			 , round(nvl(avg_evl_score, 0), 1)                                                       as avg_evl_score
+			 , round(nvl((avg_evl_score - round(nvl(avg_evl_score, 0), 1)) * 10, 0), 1)              as avg_evl_score_dot
+		from (
+				 select name
+					  , member_uid
+					  , SUBSTR(REG_DATE, 1, 4) || '-' || SUBSTR(REG_DATE, 5, 2) || '-' ||
+						SUBSTR(REG_DATE, 7, 2)                as reg_date
+					  , nvl(sum(cns_request_cnt), 0)          as cns_request_cnt
+					  , nvl(sum(work_yn), 0)                  as work_yn
+					  , nvl(sum(cns_end_cnt), 0)              as cns_end_cnt
+					  , sum(evl_end_time) / sum(work_yn)      as evl_end_time
+					  , sum(evl_cnt) / sum(work_yn)           as avg_evl_end_cnt
+					  , nvl(sum(evl_cnt), 0)                  as evl_cnt
+					  , nvl(sum(evl_evl_score), 0) / count(*) as avg_evl_score
+				 from shfda.tb_STATS_CNSR
+				 where reg_date >= #{startDate}
+				   and reg_date <![CDATA[<]]>= #{endDate}
+				   and member_uid = #{member_uid}
+				   <choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				 group by name, member_uid
+						, reg_date
+			 ) a,
+			 (
+				 select to_char(to_date(#{startDate}, 'yyyymmdd') + level - 1, 'yyyy-mm-dd') as day
+				 from dual connect by level <![CDATA[<]]>= ( to_date(
+					  #{endDate},
+					  'yyyymmdd') - to_date(
+					  #{startDate},
+					  'yyyymmdd')+1)
+			 ) b
+		where a.reg_date(+) = b.day
+		order by b.day
+	</select>
+
+	<select id="selectMonthlyAdviserStatcsAll" resultType="CMap">
+		/* reporting.selectMonthlyAdviserStatcsAll */
+		select SUBSTR(REG_DATE, 1, 4) || '-' || SUBSTR(REG_DATE, 5, 2) || '-' || SUBSTR(REG_DATE, 7, 2) as day
+			 , nvl(sum(cns_request_cnt), 0)                                                             as cns_request_cnt
+			 , nvl(sum(work_yn), 0)                                                                     as work_yn
+			 , nvl(sum(cns_end_cnt), 0)                                                                 as cns_end_cnt
+			 , nvl(sum(evl_end_time), 0) || '초'                                                         as evl_end_time
+			 , round(sum(evl_end_time) / sum(work_yn), 1)                                                         as avg_evl_end_cnt
+			 , nvl(sum(evl_cnt), 0)                                                                     as evl_cnt
+			 , sum(evl_cnt)                                                                             as evl_score_cnt
+			 , round(nvl(sum(evl_evl_score), 0) / count(*), 1)                                                    as avg_evl_score
+		from shfda.tb_STATS_CNSR
+		where reg_date >= #{startDate}
+		  and reg_date <![CDATA[<]]>= #{endDate}
+		  <choose>
+						<when test="linkCd != null">
+						and cstm_link_div_cd in
+							<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+								#{item}
+							</foreach>
+						</when>
+					</choose>
+		group by SUBSTR(REG_DATE, 1, 4) || '-' || SUBSTR(REG_DATE, 5, 2) || '-' || SUBSTR(REG_DATE, 7, 2)
+	</select>
+
+	<select id="selectMonthlyScoreStatcs" resultType="CMap">
+		/* reporting.selectMonthlyScoreStatcs */
+		select *
+		from
+			(
+				select
+					to_char(b.create_dt,'yyyy-mm-dd') as create_dt
+					, to_char(a.room_end_dt,'yyyy-mm-dd') 						as room_end_dt
+					, b.evl_score
+					, nvl((b.evl_score - round(nvl(b.evl_score,0),0))*10,1) 		as avg_evl_score_dot
+					, b.evl_cont
+					, c.name
+					, a.chat_room_uid
+					, count(1) over() as tot_count
+					, row_number() over(order by a.room_end_dt desc) as rnum
+				from shfda.tb_chat_room a,
+					shfda.tb_cns_evl b
+					, shfda.tb_member_info c
+				where
+					a.chat_room_uid = b.chat_room_uid
+					and a.member_uid = c.member_uid
+					and a.member_uid not like '999999999%'
+					and a.room_create_dt >= to_date(#{startDate},'yyyymmdd')
+					and a.room_create_dt <![CDATA[<]]>to_date(#{endDate},'yyyymmdd')+1
+					<if test="departCd != null and departCd != ''">
+						and a.depart_cd = #{departCd}
+					</if>
+					<choose>
+						<when test="linkCd != null">
+						and a.cstm_link_div_cd in
+							<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+								#{item}
+							</foreach>
+						</when>
+					</choose>
+					
+				order by a.room_end_dt desc
+		) t
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+	</select>
+
+	<select id="selectMonthlyScoreAvg" resultType="int">
+		/* reporting.selectMonthlyScoreAvg */
+		select
+			case when count(*) = 0 then 0 else round(sum(b.evl_score) / count(*),1) end
+		from shfda.tb_chat_room a,
+			shfda.tb_cns_evl b
+			, shfda.tb_member_info c
+		where
+			a.chat_room_uid = b.chat_room_uid
+			and a.member_uid = c.member_uid
+		<if test="memberDivCd eq 'M'.toString()">
+			and (a.manager_uid = #{member_uid} or c.upper_member_uid = #{member_uid} )
+		</if>
+			and a.room_create_dt >= to_date(#{startDate},'yyyymmdd')
+			and a.room_create_dt <![CDATA[<]]>to_date(#{endDate},'yyyymmdd')+1
+			<choose>
+				<when test="linkCd != null">
+				and a.cstm_link_div_cd in
+					<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+						#{item}
+					</foreach>
+				</when>
+			</choose>
+	</select>
+
+	<select id="selectScoreListAll" resultType="CMap">
+		/* reporting.selectScoreListAll */
+		select
+			to_char(b.create_dt,'yyyy-mm-dd') as create_dt
+			,to_char(a.room_end_dt,'yyyy-mm-dd') as room_end_dt
+			, b.evl_score
+			, b.evl_cont
+			, c.name
+			, a.chat_room_uid
+			, count(1) over() as tot_count
+			, row_number() over(order by a.room_end_dt desc) as rnum
+		from shfda.tb_chat_room a,
+			shfda.tb_cns_evl b
+			, shfda.tb_member_info c
+		where
+			a.chat_room_uid = b.chat_room_uid
+			and a.member_uid = c.member_uid
+			and a.room_create_dt >= to_date(#{startDate},'yyyymmdd')
+			and a.room_create_dt <![CDATA[<]]>to_date(#{endDate},'yyyymmdd')+1
+			and a.member_uid not like '999999999%'
+			<if test="departCd != null and departCd != ''">
+				and a.depart_cd = #{departCd}
+			</if>
+			<choose>
+				<when test="linkCd != null">
+				and a.cstm_link_div_cd in
+					<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+						#{item}
+					</foreach>
+				</when>
+			</choose>
+			
+		order by a.room_end_dt desc
+	</select>
+
+	<select id="selectDailyBasicStatcs" resultType="CMap">
+		/* reporting.selectDailyBasicStatcs*/
+		select nvl(CNS_REQUEST_CNT, 0)                                                  	as CNS_REQUEST_CNT
+			, nvl(cns_quit_cnt, 0 )																	as cns_quit_cnt
+			, nvl(CNS_AQUIT_CNT, 0) 											AS CNS_AQUIT_CNT
+			, nvl(CNS_BQUIT_CNT, 0) 											AS CNS_BQUIT_CNT
+			, nvl(SYS_FULL_CNT, 0) 											AS SYS_FULL_CNT
+			, nvl(CNS_end_CNT, 0)                                                          		as CNS_end_CNT
+			, nvl(evl_end_time, 0)                                                         			as evl_end_time
+			, nvl(floor(evl_end_time / 86400), 0)                                          	as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'HH24'), '00') 	as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'mi'), '00')   		as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'ss'), '00')   		as avg_end_sec
+			, round(nvl(avg_end_cnt, 0), 1)                                                          					as avg_end_cnt
+			, nvl(cnsr_cnt, 0)                                                             			as cnsr_cnt
+			, nvl(cns_end_auto, 0)                                                             as cns_end_auto
+			, nvl(cns_end_cstm, 0)                                                             as cns_end_cstm
+			, nvl(cns_end_cnsr, 0)                                                             	as cns_end_cnsr
+			, nvl(OUT_SERVICE_CNT, 0)                                                             	as OUT_SERVICE_CNT
+		from (
+				 select sum(CNS_REQUEST_CNT)  		                                   				as CNS_REQUEST_CNT
+				 	, SUM(CNS_QUIT_CNT + SYS_FULL_CNT + CNS_BQUIT_CNT) 											AS CNS_QUIT_CNT
+				 	, SUM(CNS_QUIT_CNT) 											AS CNS_AQUIT_CNT
+				 	, SUM(CNS_BQUIT_CNT) 											AS CNS_BQUIT_CNT
+				 	, SUM(SYS_FULL_CNT) 											AS SYS_FULL_CNT
+					, sum(CNS_end_CNT)                                             															as CNS_end_CNT
+					, (CASE WHEN sum(evl_end_time) > 0 THEN round(sum(evl_end_time) / sum(CNS_end_CNT), 1)
+					  		ELSE 0 END )   																											as evl_end_time
+					, (CASE WHEN sum(CNS_end_CNT) > 0 AND max(cnsr_cnt) > 0
+					  		THEN round(sum(CNS_end_CNT) / max(cnsr_cnt), 1)   
+					  		ELSE 0 END ) 																											as avg_end_cnt
+					, max(cnsr_cnt)                                                																	as cnsr_cnt
+					, sum(cns_end_auto)																										as cns_end_auto
+					, sum(cns_end_cstm)																										as cns_end_cstm
+					, sum(cns_end_cnsr)																											as cns_end_cnsr
+					, sum(OUT_SERVICE_CNT)																											as OUT_SERVICE_CNT
+				 from shfda.tb_STATS_DATE
+				 where reg_date = #{regDate}
+				 <if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				 <choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				 	and cnsr_div_cd = 'C'
+			 )
+	</select>
+	
+	<select id="selectDailyBasicKakao" resultType="CMap">
+		/* reporting.selectDailyBasicKakao  - 일간 basicList - kakao */
+		SELECT count(*) AS kakao_div_cnt
+		FROM 
+			shfda.tb_chat_room 
+		WHERE 
+			CSTM_LINK_DIV_CD = 'B' 
+			AND ROOM_CREATE_DT >= TO_DATE(#{regDate}, 'yyyymmdd') 
+			AND ROOM_CREATE_DT <![CDATA[<]]> TO_DATE(#{regDate}, 'yyyymmdd') + 1
+			AND TO_NUMBER(MEMBER_UID) <![CDATA[<]]> 1999999991
+	</select>
+	
+	<select id="selectDailyTimeStatcs" resultType="CMap">
+		/* reporting.selectDailyTimeStatcs 일별내 시간별데이터*/
+		select
+			b.reg_time || ' : 00 ~ ' || b.reg_time || ' : 59' 							as reg_time
+			, nvl(cns_request_cnt,0) 													as cns_request_cnt
+			, nvl(cns_end_cnt,0) 														as cns_end_cnt
+			, nvl(evl_end_time / DECODE(cns_end_cnt, 0, NULL, cns_end_cnt) ,0) 			as evl_end_time
+			, nvl(floor(evl_end_time/86400),0) as avg_end_date
+			, nvl(to_char(to_date(ceil(mod(evl_end_time / DECODE(cns_end_cnt, 0, NULL, cns_end_cnt),86400)),'SSSSS'),'HH24'),'00') as avg_end_hour
+			, nvl(to_char(to_date(ceil(mod(evl_end_time / DECODE(cns_end_cnt, 0, NULL, cns_end_cnt),86400)),'SSSSS'),'mi'),'00') as avg_end_min
+			, nvl(to_char(to_date(ceil(mod(evl_end_time / DECODE(cns_end_cnt, 0, NULL, cns_end_cnt),86400)),'SSSSS'),'ss'),'00') as avg_end_sec
+			, round(nvl(cns_end_cnt/ DECODE(max_cnsr_cnt , 0, NULL, max_cnsr_cnt), 0), 1) as avg_per_cnsr
+			, nvl(CNS_BQUIT_CNT, 0) as cns_bquit_cnt
+			, nvl(CNS_QUIT_CNT, 0) 	as cns_aquit_cnt
+			, nvl(SYS_FULL_CNT, 0)	as sys_full_cnt
+			, NVL(OUT_SERVICE_CNT, 0)						AS OUT_SERVICE_CNT
+		from
+		(
+			select
+				reg_time
+				, sum(cns_request_cnt) 						as cns_request_cnt
+				, sum(cns_end_cnt) 							as cns_end_cnt
+				, sum(evl_end_time) 						as evl_end_time
+				, SUM(CNS_BQUIT_CNT)						as CNS_BQUIT_CNT
+				, SUM(CNS_QUIT_CNT)							as CNS_QUIT_CNT
+				, SUM(SYS_FULL_CNT)							AS SYS_FULL_CNT
+				, SUM(OUT_SERVICE_CNT)						AS OUT_SERVICE_CNT 
+				, max(CNSR_CNT)								AS max_cnsr_cnt
+			from shfda.tb_STATS_TIME
+			where reg_date = #{regDate}
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				and cnsr_div_cd = 'C'
+				<if test="cstm_link_div_cd != null">
+					and cstm_link_div_cd = #{cstm_link_div_cd}
+				</if>
+				<choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+			group by reg_time
+		) a
+		,
+		(
+			select to_char(level-1,'FM00') as reg_time from dual connect by level <![CDATA[<]]>=24
+		) b
+		where a.reg_time(+) = b.reg_time
+		order by b.reg_time
+	</select>
+
+	<select id="selectDailyAdviserTimeStatcs" resultType="CMap">
+		/* reporting.selectDailyAdviserTimeStatcs */
+		select nvl(sum(cns_request_cnt), 0)                                                      as cns_request_cnt
+			 , nvl(sum(cns_end_cnt), 0)                                                          as cns_end_cnt
+			 , nvl(sum(evl_end_time), 0) / 60 / 60                                               as evl_end_time
+			 , nvl(floor(sum(evl_end_time) / sum(cns_end_cnt) / 86400), 0)                                          as avg_end_date
+			 , nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(cns_end_cnt), 86400)), 'SSSSS'), 'HH24'), '00') as avg_end_hour
+			 , nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(cns_end_cnt), 86400)), 'SSSSS'), 'mi'), '00')   as avg_end_min
+			 , nvl(to_char(to_date(ceil(mod(sum(evl_end_time) / sum(cns_end_cnt), 86400)), 'SSSSS'), 'ss'), '00')   as avg_end_sec
+			 , round(nvl(sum(evl_end_time) / decode(sum(cnsr_cnt), 0, null, sum(cnsr_cnt)), 0),1)         as avg_evl_end_time
+			 , nvl(sum(cnsr_cnt), 0)                                                             as cnsr_cnt
+		from shfda.tb_STATS_TIME
+		where reg_date = #{regDate}
+		<choose>
+			<when test="linkCd != null">
+			and cstm_link_div_cd in
+				<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+					#{item}
+				</foreach>
+			</when>
+		</choose>
+	</select>
+
+	<select id="selectDailyAdviserStatcs" resultType="CMap">
+		/* reporting.selectDailyAdviserStatcs */
+		/* IPCC 상담 총 시간 포함*/
+		select name
+			 , member_uid
+			 , b.reg_time                                                                   as reg_time
+			 , nvl(cns_request_cnt, 0)                                                      as cns_request_cnt
+			 , nvl(work_yn, 0)                                                              as work_yn
+			 , nvl(cns_end_cnt, 0)                                                          as cns_end_cnt
+			 , nvl(evl_end_time, 0) / 60 / 60                                               as evl_end_time
+			 , nvl(floor(evl_end_time / 86400), 0)                                          as avg_end_date
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'HH24'), '00') as avg_end_hour
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'mi'), '00')   as avg_end_min
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'ss'), '00')   as avg_end_sec
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'HH24:mi:ss'), '00') as total_use_time
+			 , round(nvl(avg_evl_end_cnt, 0), 1)                                                      as avg_evl_end_cnt
+			 , round(nvl(a.avg_per_cnsr, 0), 1)													as avg_per_cnsr
+		from (
+				 select name
+					  , member_uid
+					  , reg_time
+					  , nvl(sum(cns_request_cnt), 0)          		as cns_request_cnt
+					  , nvl(sum(work_yn), 0)                  		as work_yn
+					  , nvl(sum(cns_end_cnt), 0)              		as cns_end_cnt
+					  , sum(evl_end_time) / sum(work_yn)      	as evl_end_time
+					  , sum(evl_cnt) / sum(work_yn)         		as avg_evl_end_cnt
+					  , nvl(sum(evl_end_time), 0) / count(*) 		as avg_evl_time
+					  , nvl(sum(cns_end_cnt), 0) / count(*) 		as avg_per_cnsr
+				 from shfda.tb_STATS_CNSR_TIME
+				 where reg_date = #{regDate}
+				   <if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				 <choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				 group by name, member_uid
+						, reg_time
+			 ) a,
+			 (
+				 select to_char(level - 1, 'FM00') as reg_time from dual connect by level <![CDATA[<]]>=24
+			 ) b
+		where a.reg_time(+) = b.reg_time
+		order by b.reg_time
+
+	</select>
+
+	<select id="selectDailyAdviserStatcsGraph" resultType="CMap">
+		/* reporting.selectDailyAdviserStatcsGraph */
+		select name
+			 , member_uid
+			 , b.reg_time                                                                   			as reg_time
+			 , nvl(cns_request_cnt, 0)                                                      	as cns_request_cnt
+			 , nvl(work_yn, 0)                                                              		as work_yn
+			 , nvl(cns_end_cnt, 0)                                                          		as cns_end_cnt
+			 , round(nvl(evl_end_time, 0) / 60 / 60 , 1)                                              	as evl_end_time
+			 , nvl(floor(evl_end_time / 86400), 0)                                          				as avg_end_date
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'HH24'), '00') 	as avg_end_hour
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'mi'), '00')   		as avg_end_min
+			 , nvl(to_char(to_date(ceil(mod(evl_end_time, 86400)), 'SSSSS'), 'ss'), '00')   		as avg_end_sec
+			 , round(nvl(avg_evl_end_cnt, 0), 1)                                                      	as avg_evl_end_cnt
+			 , nvl(evl_cnt, 0)                                                              							as evl_cnt
+			 , round(nvl(avg_evl_score, 0),1)                                                        		as avg_evl_score
+		from (
+				 select name
+					  , member_uid
+					  , reg_time
+					  , nvl(sum(cns_request_cnt), 0)          as cns_request_cnt
+					  , nvl(sum(work_yn), 0)                  as work_yn
+					  , nvl(sum(cns_end_cnt), 0)              as cns_end_cnt
+					  , sum(evl_end_time) / sum(work_yn)      as evl_end_time
+					  , sum(evl_cnt) / sum(work_yn)           as avg_evl_end_cnt
+					  , nvl(sum(evl_cnt), 0)                  as evl_cnt
+					  , nvl(sum(evl_evl_score), 0) / count(*) as avg_evl_score
+				 from shfda.tb_STATS_CNSR_TIME
+				 where reg_date = #{regDate}
+				   and member_uid = #{member_uid}
+				   <choose>
+						<when test="linkCd != null">
+						and cstm_link_div_cd in
+							<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+								#{item}
+							</foreach>
+						</when>
+					</choose>
+				 group by name, member_uid
+						, reg_time
+			 ) a,
+			 (
+				 select to_char(level - 1, 'FM00') as reg_time from dual connect by level <![CDATA[<]]>=24
+			 ) b
+		where a.reg_time(+) = b.reg_time
+		order by b.reg_time
+
+
+	</select>
+
+	<select id="selectCounseling" resultType="CMap">
+		/* reporting.selectCounseling 채널 인입 조건 추가  */
+		select t.*
+			 , nvl(to_char(to_date(ceil(mod(use_time, 86400)), 'SSSSS'), 'HH24'), '00') 		as use_time_hour
+			 , nvl(to_char(to_date(ceil(mod(use_time, 86400)), 'SSSSS'), 'mi'), '00')   		as use_time_min
+			 , nvl(to_char(to_date(ceil(mod(use_time, 86400)), 'SSSSS'), 'ss'), '00')   		as use_time_sec
+		from
+		(
+			select
+				cr.chat_room_uid
+				, to_char(cr.room_create_dt, 'yyyy-mm-dd hh24:mi:ss') 																as room_create_dt
+				, to_char((select min(reg_dt) from shfda.tb_chat 
+					where bot_intent = 'ASSIGN_COUNSELOR' and chat_room_uid = cr.chat_room_uid), 'yyyy-mm-dd hh24:mi:ss') 			as cnsr_assign_dt
+				, to_char((select min(reg_dt) from shfda.tb_chat 
+					where bot_intent = 'SUBMIT_COUNSELOR' and chat_room_uid = cr.chat_room_uid), 'yyyy-mm-dd hh24:mi:ss') 			as cnsr_submit_dt
+				, to_char(cr.LAST_CHAT_DT, 'yyyy-mm-dd hh24:mi:ss') 																as last_chat_dt
+				, to_char(cr.room_end_dt, 'yyyy-mm-dd hh24:mi:ss') 																	as room_end_dt
+				, nvl((cr.LAST_CHAT_DT 
+					- (SELECT min(REG_DT) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = cr.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR' ))*86400, 0)	AS use_time
+				, shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', cr.cstm_link_div_cd) 															as cstm_link_div_nm
+				, NVL(cci.coc_id, '미로그인')																							AS coc_id
+				, NVL(cci.coc_nm, '익명') 																							AS C_NAME
+				, cci.CSTM_LINK_CUSTOMER_UID  																						AS cstm_user_key
+				, (
+						select ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_1_CTG_NUM
+				) ctg1
+				, (
+						select 
+							ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_2_CTG_NUM
+				) ctg2
+				, (
+						select 
+							ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_3_CTG_NUM
+				) ctg3
+				, shfda.fn_getCodeNm('END_DIV_CD', cr.end_div_cd)																			as end_div_nm
+				, cr.MEMBER_UID 																									AS cnsr_uid
+				, mi.name 																											AS m_name 
+				,shfda.fn_GETMANAGERNAME(cr.MEMBER_UID) 																					as manager_nm
+				, count(1) over()																									as tot_count
+				, row_number() over(order by cr.room_end_dt desc)												 					as rnum
+			from
+				shfda.tb_chat_room cr
+				LEFT OUTER JOIN shfda.tb_chat_end_info cei ON ( cr.chat_room_uid = cei.chat_room_uid)
+				LEFT OUTER JOIN shfda.tb_CHAT_CSTM_INFO cci ON ( cr.CSTM_UID = cci.CSTM_UID)
+				LEFT OUTER JOIN shfda.tb_MEMBER_INFO mi ON ( mi.MEMBER_UID = cr.MEMBER_UID)
+			where 1=1
+				<if test="departCd != null and departCd != ''"> 
+				cr.depart_cd = #{departCd}
+				</if>
+				AND cr.end_yn = 'Y'
+				and cr.room_end_dt <![CDATA[<]]> to_date(#{endDate},'yyyymmdd')+1
+				and cr.room_end_dt >= to_date(#{startDate},'yyyymmdd')
+				and cr.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+				
+				<choose>
+					<when test="linkCd != null">
+					and cr.cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				<if test="customerType =='CID'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and cci.coc_id like '%' || #{customerText} || '%'
+					</if>
+				</if>
+				<if test="customerType =='CNM'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and cci.coc_nm like '%' || #{customerText} || '%'
+					</if>
+				</if>
+				<if test="customerType =='MNM'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and lower(mi.name) like '%' || lower(#{customerText}) || '%'
+					</if>
+				</if>	
+		) t
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+			
+		
+
+	</select>
+<select id="selectCounselingExcel" resultType="CMap">
+		/* reporting.selectCounselingExcel */
+		select *
+		from
+		(
+			select
+				cr.chat_room_uid
+				, to_char(cr.room_create_dt, 'yyyy-mm-dd hh24:mi:ss') 																as room_create_dt
+				, to_char((select min(reg_dt) from shfda.tb_chat 
+					where bot_intent = 'ASSIGN_COUNSELOR' and chat_room_uid = cr.chat_room_uid), 'yyyy-mm-dd hh24:mi:ss') 			as cnsr_assign_dt
+				, to_char((select min(reg_dt) from shfda.tb_chat 
+					where bot_intent = 'SUBMIT_COUNSELOR' and chat_room_uid = cr.chat_room_uid), 'yyyy-mm-dd hh24:mi:ss') 			as cnsr_submit_dt
+				, to_char(cr.LAST_CHAT_DT, 'yyyy-mm-dd hh24:mi:ss') 																as last_chat_dt
+				, to_char(cr.room_end_dt, 'yyyy-mm-dd hh24:mi:ss') 																	as room_end_dt
+				, ROUND(nvl((cr.LAST_CHAT_DT 
+					- (SELECT min(REG_DT) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = cr.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR' ))*86400, 0), 1) AS use_time
+				, shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', cr.cstm_link_div_cd) 															as cstm_link_div_nm
+				, (SELECT cci.COC_ID AS c_name FROM shfda.tb_CHAT_CSTM_INFO cci WHERE cci.CSTM_UID = cr.CSTM_UID) 						as coc_id
+				, (SELECT NVL(cci.name, '-') AS c_name FROM shfda.tb_CHAT_CSTM_INFO cci WHERE cci.CSTM_UID = cr.CSTM_UID) 				AS C_NAME 
+				, (SELECT cci.CSTM_LINK_CUSTOMER_UID AS c_name FROM shfda.tb_CHAT_CSTM_INFO cci WHERE cci.CSTM_UID = cr.CSTM_UID) 		AS cstm_user_key
+				, (
+						select ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_1_CTG_NUM
+				) ctg1
+				, (
+						select 
+							ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_2_CTG_NUM
+				) ctg2
+				, (
+						select 
+							ctg_nm
+						from shfda.TB_END_CTG_INFO
+						WHERE ctg_num = cei.DEP_3_CTG_NUM
+				) ctg3
+				, shfda.fn_getCodeNm('END_DIV_CD', cr.end_div_cd)																			as end_div_nm
+				, cr.MEMBER_UID 																									AS cnsr_uid
+				, (SELECT name FROM shfda.tb_MEMBER_INFO m WHERE m.member_uid = cr.MEMBER_UID) AS m_name 
+				,shfda.fn_GETMANAGERNAME(cr.MEMBER_UID) 																					as manager_nm
+				, count(1) over()																									as tot_count
+				, row_number() over(order by cr.room_end_dt desc)												 					as rnum
+			from
+				shfda.tb_chat_room cr
+				LEFT OUTER JOIN shfda.tb_chat_end_info cei ON ( cr.chat_room_uid = cei.chat_room_uid)
+			where
+				cr.end_yn = 'Y'
+				<if test="departCd != null and departCd != ''"> 
+				 	and cr.depart_cd = #{departCd}
+				 </if>
+				and cr.room_end_dt <![CDATA[<]]> to_date(#{endDate},'yyyymmdd')+1
+				and cr.room_end_dt >= to_date(#{startDate},'yyyymmdd')
+				and cr.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+				<choose>
+					<when test="linkCd != null">
+					and cr.cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+		) t
+		where 1=1
+			<if test="customerType =='CID'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and t.coc_id like '%' || #{customerText} || '%'
+					</if>
+				</if>
+				<if test="customerType =='CNM'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and t.c_name like '%' || #{customerText} || '%'
+					</if>
+				</if>
+				<if test="customerType =='MNM'.toString()">
+					<if test="customerText != null and customerText != ''.toString()">
+					and lower(t.m_name) like '%' || lower(#{customerText}) || '%'
+					</if>
+				</if>		
+	</select>
+	<select id="selectCounselingCnt" resultType="CMap">
+		/* reporting.selectCounselingCnt */
+		SELECT
+				 nvl(sum(CNS_REQUEST_CNT), 0) 										AS depart_all_cnt
+				, nvl(sum(CNS_QUIT_CNT + CNS_BQUIT_CNT + SYS_FULL_CNT), 0)  		AS cstm_quit_cnt
+				, nvl(sum(CNS_BQUIT_CNT), 0)  										AS CNS_BQUIT_CNT
+				, nvl(sum(CNS_QUIT_CNT), 0)  										AS CNS_AQUIT_CNT
+				, nvl(sum(SYS_FULL_CNT), 0)  										AS SYS_FULL_CNT
+				, nvl(sum(CNS_END_CNT), 0) 											AS cnsr_end_total_cnt
+				, nvl(sum(OUT_SERVICE_CNT), 0)										as OUT_SERVICE_CNT
+				, nvl(sum(CNS_END_AUTO), 0) 										AS bat_end_cnt
+				, nvl(sum(CNS_END_CSTM), 0) 										AS cmr_end_cnt
+				, nvl(sum(CNS_END_CNSR), 0) 										AS cnsr_end_cnt
+				, ROUND(sum(EVL_END_TIME) / sum(CNS_END_CNT), 1)						AS avg_use_time
+				, CASE WHEN nvl(floor(sum(EVL_END_TIME) / sum(CNS_END_CNT)/86400),0) > 0 THEN nvl(floor(sum(EVL_END_TIME) / sum(CNS_END_CNT)/86400),0) || '일 ' END ||
+					CASE WHEN nvl(to_char(to_date(ceil(mod(sum(EVL_END_TIME) / sum(CNS_END_CNT),86400)),'SSSSS'),'HH24'),0) > 0 THEN nvl(to_char(to_date(ceil(mod(sum(EVL_END_TIME) / sum(CNS_END_CNT),86400)),'SSSSS'),'HH24'),0) || '시 ' END ||
+					CASE WHEN nvl(to_char(to_date(ceil(mod(sum(EVL_END_TIME) / sum(CNS_END_CNT),86400)),'SSSSS'),'mi'),0) > 0 THEN nvl(to_char(to_date(ceil(mod(sum(EVL_END_TIME) / sum(CNS_END_CNT),86400)),'SSSSS'),'mi'),0) || '분 ' END ||
+					nvl(to_char(to_date(ceil(mod(sum(EVL_END_TIME) / sum(CNS_END_CNT),86400)),'SSSSS'),'ss'),0) || '초'  AS total_avg_talk_time
+		
+			FROM shfda.tb_STATS_DATE a
+			WHERE a.REG_DATE <![CDATA[<]]>= to_date(#{endDate}, 'yyyymmdd')
+				and a.REG_DATE >= to_date(#{startDate}, 'yyyymmdd')
+				<if test="departCd != null and departCd != ''"> 
+				 	and a.depart_cd = #{departCd}
+				 </if>
+				AND a.CNSR_DIV_CD = 'C'
+				<choose>
+					<when test="linkCd != null">
+						and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+	
+	</select>
+
+	
+
+	<select id="selectCtgMgtDpt" resultType="String">
+		/* reporting.selectCtgMgtDpt */
+		select to_char(ctg_mgt_dpt)
+		from shfda.tb_set 
+		where 1=1
+		<if test="departCd != null and departCd != ''">
+		    AND depart_cd= #{departCd}
+		</if>	
+			AND rownum=1		
+	</select>
+
+	<select id="selectBlockCnt" resultType="CMap">
+		/* reporting.selectBlockCnt 	*/
+		SELECT
+				f.name	AS name
+				, e.rc_bot_intent AS bot_intent
+				, e.rc_block_cnt	AS block_cnt
+				, nvl(e.rc_start_cnt, 0)	AS str_cnt
+				, nvl(e.rc_req_yn, 0)		AS req_cnt
+		FROM
+			(
+			SELECT
+				a.BOT_INTENT AS rc_bot_intent
+				, sum(a.block_cnt) AS rc_block_cnt
+				, SUM(c.start_cnt) AS rc_start_cnt
+				, sum(b.req_yn) AS rc_req_yn
+			FROM
+				(
+				SELECT
+					a.BOT_INTENT			
+					, count(a.BOT_INTENT) AS block_cnt
+				FROM
+					shfda.tb_CHAT a
+				LEFT OUTER JOIN shfda.tb_chat_room b ON
+					(a.CHAT_ROOM_UID = b.CHAT_ROOM_UID)
+				WHERE b.cstm_link_div_cd != 'B'
+					AND a.SENDER_DIV_CD = 'R'
+					AND a.BOT_INTENT IS NOT NULL 
+					AND a.BOT_INTENT NOT IN ('SYSTEM_FALLBACK',	'DEFAULT_FALLBACK',	'DEFAULT_ACTION')
+					and	a.REG_DT >= TO_DATE(#{startDate}, 'yyyymmdd')
+					AND a.REG_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+				GROUP BY a.BOT_INTENT
+				) a
+				LEFT OUTER JOIN (
+					SELECT l.BOT_INTENT, l.req_yn AS req_yn
+					FROM (
+						SELECT 
+							BOT_INTENT
+							, sum((SELECT count(BOT_INTENT) FROM shfda.tb_chat WHERE BOT_INTENT = 'REQUEST_COUNSELOR' AND CHAT_ROOM_UID = a.CHAT_ROOM_UID)) AS req_yn
+						FROM shfda.tb_chat a
+							LEFT OUTER JOIN shfda.tb_bot_block b ON (a.BOT_INTENT = TO_CHAR(b.ID))
+						WHERE a.REG_DT >= TO_DATE(#{startDate}, 'yyyymmdd')
+							AND a.REG_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+							AND b.name IS NOT NULL 
+						GROUP BY a.BOT_INTENT
+						) l
+					WHERE l.req_yn > 0
+				) b ON (a.BOT_INTENT = b.bot_intent)
+				LEFT OUTER JOIN (
+				SELECT
+					FIRST_BOT_INTENT ,
+					COUNT(FIRST_BOT_INTENT) AS start_cnt
+				FROM
+					shfda.tb_CHAT_ROOM
+				WHERE
+					FIRST_BOT_INTENT IS NOT NULL
+					AND CNSR_DIV_CD = 'R'
+					AND FIRST_BOT_INTENT NOT IN ('SYSTEM_FALLBACK',	'DEFAULT_FALLBACK',	'DEFAULT_ACTION')
+					AND room_end_dt >= TO_DATE(#{startDate}, 'yyyymmdd')
+					AND room_end_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+					AND cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+				GROUP BY
+					FIRST_BOT_INTENT 
+				) c ON	(a.BOT_INTENT = c.FIRST_BOT_INTENT)
+			GROUP BY
+				a.BOT_INTENT 
+			) e,
+			shfda.tb_bot_block f
+		WHERE
+			e.rc_BOT_INTENT = TO_CHAR(f.ID)
+	</select>
+	
+	<select id="selectBotBasicCnt" resultType="CMap">
+		/* reporting.selectBotBasicCnt */
+		SELECT 
+				sum(CNS_REQUEST_CNT)							AS bot_all_cnt
+				, sum(ROBOT_END_CNT)							AS bot_use_cnt
+				, (sum(CSTM_NEW_VISIT) + sum(CSTM_RE_VISIT)) 	AS bot_cstm_cnt
+				, sum(CSTM_NEW_VISIT) 							AS newvisit_cnt
+				, sum(CSTM_RE_VISIT)							AS revisit_cnt
+				, sum(ROBOT_USE_TIME) / sum(ROBOT_END_CNT) 
+				, nvl(to_char(to_date(ceil(mod(sum(ROBOT_USE_TIME) / sum(ROBOT_END_CNT) ,86400)),'SSSSS'),'HH24'),'00') || ' : '
+					|| nvl(to_char(to_date(ceil(mod(sum(ROBOT_USE_TIME) / sum(ROBOT_END_CNT) ,86400)),'SSSSS'),'mi'),'00') || ' : '
+					|| nvl(to_char(to_date(ROUND(mod(sum(ROBOT_USE_TIME) / sum(ROBOT_END_CNT) ,86400)),'SSSSS'),'ss'),'00') 		AS els_avg_time
+			FROM shfda.tb_STATS_LINK_ROBOT 
+			WHERE to_date(REG_DATE, 'yyyymmdd') <![CDATA[<]]>= to_date(#{endDate}, 'yyyymmdd') and to_date(REG_DATE, 'yyyymmdd')  >= to_date(#{startDate}, 'yyyymmdd') 
+					<choose>
+						<when test="linkCd != null">
+						and cstm_link_div_cd in
+							<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+								#{item}
+							</foreach>
+						</when>
+					</choose>
+	</select>
+	
+	<select id="selectBotChannelCnt" resultType="CMap">
+		/* reporting.selectBotChannelCnt */
+				SELECT  
+			(	
+				SELECT (sum(CSTM_NEW_VISIT) + sum(CSTM_RE_VISIT)) AS bot_cstm_cnt
+			FROM shfda.tb_STATS_LINK_ROBOT 
+			WHERE cstm_link_div_cd = 'A' AND to_date(REG_DATE) <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd')+1 and to_date(REG_DATE)  >= to_date(#{startDate}, 'yyyymmdd')
+			) AS web_cnt
+			, (	
+				SELECT (sum(CSTM_NEW_VISIT) + sum(CSTM_RE_VISIT)) AS bot_cstm_cnt
+			FROM shfda.tb_STATS_LINK_ROBOT 
+			WHERE cstm_link_div_cd = 'B' AND to_date(REG_DATE) <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd')+1 and to_date(REG_DATE)  >= to_date(#{startDate}, 'yyyymmdd')
+			) AS kak_cnt
+			, (	
+				SELECT (sum(CSTM_NEW_VISIT) + sum(CSTM_RE_VISIT)) AS bot_cstm_cnt
+			FROM shfda.tb_STATS_LINK_ROBOT 
+			WHERE cstm_link_div_cd = 'C' AND to_date(REG_DATE) <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd')+1 and to_date(REG_DATE)  >= to_date(#{startDate}, 'yyyymmdd')
+			) AS nav_cnt
+			, (	
+				SELECT (sum(CSTM_NEW_VISIT) + sum(CSTM_RE_VISIT)) AS bot_cstm_cnt
+			FROM shfda.tb_STATS_LINK_ROBOT 
+			WHERE to_date(REG_DATE) <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd')+1 and to_date(REG_DATE)  >= to_date(#{startDate}, 'yyyymmdd')
+			) AS all_cnt
+FROM dual
+	</select>
+	
+	<select id="selectBotChannelDate" resultType="CMap">
+		/* reporting.selectBotChannelDate */
+	select 
+		to_char(to_date(reg_date, 'yyyymmdd'), 'yyyy-mm-dd')  as reg_date
+		,shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', CSTM_LINK_DIV_CD)  AS link_div_nm
+		, nvl(sum(cstm_new_visit + cstm_re_visit), 0) as all_cnt
+		, nvl(sum(cstm_new_visit), 0) as new_visit_cnt
+		, nvl(sum(cstm_re_visit), 0) as re_visit_cnt
+		, nvl(sum(robot_end_cnt), 0) as chatbot_cnt
+		, NVL(TO_CHAR(TO_DATE(CEIL(MOD(SUM(robot_use_time) / decode(SUM(robot_end_cnt), 0, NULL) , 86400)), 'SSSSS'), 'HH24'), '00') AS elapse_hour
+		, NVL(TO_CHAR(TO_DATE(CEIL(MOD(SUM(robot_use_time) / decode(SUM(robot_end_cnt), 0, NULL) , 86400)), 'SSSSS'), 'mi'), '00') AS elapse_min 
+		, NVL(TO_CHAR(TO_DATE(ROUND(MOD(SUM(robot_use_time) / decode(SUM(robot_end_cnt), 0, NULL) , 86400)), 'SSSSS'), 'ss'), '00') AS elapse_sec 
+		, SUM(ROBOT_USE_TIME) / decode(SUM(robot_end_cnt), 0, NULL) AS elapse_time
+	from shfda.tb_STATS_LINK_ROBOT
+				where 1=1
+					and reg_date >= to_date(#{startDate}, 'yyyymmdd')
+					and reg_date <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd') + 1
+					<choose>
+					<when test="linkCd != null">
+					and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				group by reg_date, CSTM_LINK_DIV_CD
+				order by reg_date, cstm_link_div_cd asc
+
+	</select>
+	
+	<select id="selectBotChannelDateGraph" resultType="CMap">
+		/* reporting.selectBotChannelDateGraph */
+	SELECT * FROM 
+	(select 
+		to_char(to_date(reg_date, 'yyyymmdd'), 'yyyy-mm-dd')  	as reg_date
+		, nvl(sum(cstm_new_visit + cstm_re_visit), 0) 			AS web_all_cnt
+		, nvl(sum(cstm_new_visit), 0) 							as web_new_visit_cnt
+		, nvl(sum(cstm_re_visit), 0) 							as web_re_visit_cnt
+	from shfda.tb_STATS_LINK_ROBOT
+				where CSTM_LINK_DIV_CD = 'A'
+					and reg_date >= to_date(#{startDate}, 'yyyymmdd')
+					and reg_date <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd') + 1
+				group by reg_date, CSTM_LINK_DIV_CD
+				order by reg_date asc
+	) a 
+	LEFT OUTER JOIN 
+	(select 
+		to_char(to_date(reg_date, 'yyyymmdd'), 'yyyy-mm-dd')  	as reg_date
+		, nvl(sum(cstm_new_visit + cstm_re_visit), 0) 			as kak_all_cnt
+		, nvl(sum(cstm_new_visit), 0) 							as kak_new_visit_cnt
+		, nvl(sum(cstm_re_visit), 0) 							as kak_re_visit_cnt
+	from shfda.tb_STATS_LINK_ROBOT
+				where CSTM_LINK_DIV_CD = 'B'
+					and reg_date >= to_date(#{startDate}, 'yyyymmdd')
+					and reg_date <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd') + 1
+				group by reg_date, CSTM_LINK_DIV_CD
+				order by reg_date asc
+	)b ON (a.reg_date = b.reg_date)
+	LEFT OUTER JOIN 
+	(select 
+		to_char(to_date(reg_date, 'yyyymmdd'), 'yyyy-mm-dd')  	as reg_date
+		, nvl(sum(cstm_new_visit + cstm_re_visit), 0) 			as nav_all_cnt
+		, nvl(sum(cstm_new_visit), 0) 							as nav_new_visit_cnt
+		, nvl(sum(cstm_re_visit), 0) 							as nav_re_visit_cnt
+	from shfda.tb_STATS_LINK_ROBOT
+				where CSTM_LINK_DIV_CD = 'C'
+					and reg_date >= to_date(#{startDate}, 'yyyymmdd')
+					and reg_date <![CDATA[<]]> to_date(#{endDate}, 'yyyymmdd') + 1
+				group by reg_date, CSTM_LINK_DIV_CD
+				order by reg_date asc
+	)c ON (a.reg_date = c.reg_date)
+	
+	</select>
+	
+	<select id="selectMCIcnt" resultType="CMap">
+	/* reporting.selectMCIcnt */
+		SELECT service_name
+		, auth_type_name
+		, total_cnt
+		, cstm_cnt
+		, round(total_cnt / CSTM_CNT, 1) AS avg_cnt
+		, INTERFACE_ID
+		, from_home
+	FROM (
+		SELECT 
+			shfda.fn_getCodeNm('SERVICE_ID', INTERFACE_ID) AS service_name
+			, CASE WHEN call_method = 'customerAuthCallback2' THEN '출금동의 ' || auth_type_name ELSE auth_type_name END AS auth_type_name
+			, sum(totalcnt) AS total_cnt
+			, count( DISTINCT CSTM_UID) AS cstm_cnt
+			, INTERFACE_ID
+			, g.AUTH_POSITION AS from_home
+		FROM
+		(
+			SELECT 
+ 				a.INTERFACE_ID AS INTERFACE_ID
+				, count(*) AS totalcnt
+				, A.CSTM_UID
+				,count( DISTINCT a.CSTM_UID) AS cstm_cnt
+				, CASE WHEN INTERFACE_ID = 'CBOTINFR0000' THEN shfda.fn_getCodeNm('AUTH_TYPE_CD', a.AUTH_TYPE) ELSE null END AS auth_type_name
+				, CASE WHEN a.AUTH_POSITION = 'H' THEN '홈페이지'
+						WHEN a.AUTH_POSITION = 'C' THEN '챗봇'
+						WHEN a.AUTH_POSITION = 'T' THEN '채팅'
+						ELSE '-' END AS AUTH_POSITION
+				, CASE WHEN a.call_method = 'contractInquiryDetail2' THEN 'contractInquiryDetail3' ELSE A.CALL_METHOD END  as call_method
+			from shfda.tb_hk_mci_logs a
+				LEFT OUTER JOIN shfda.tb_chat_room b ON (a.ROOM_ID = b.CHAT_ROOM_UID)
+			WHERE 
+				a.rescd = '0000' 
+				AND a.AUTH_TYPE IS NOT null
+				AND REQDT BETWEEN to_date(#{startDate}, 'yyyymmdd') AND TO_DATE(#{endDate}, 'yyyymmdd') + 0.999999
+				<choose>
+					<when test="linkCd != null">
+					and CHANNEL in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+			GROUP BY a.INTERFACE_ID, a.CSTM_UID, a.auth_type, a.auth_position ,a.call_method
+		) g
+		GROUP BY INTERFACE_ID, auth_type_name , AUTH_POSITION , call_method
+		ORDER BY INTERFACE_ID, auth_type_name , AUTH_POSITION 
+		)     
+		ORDER BY INTERFACE_ID, auth_type_name , from_home
+	</select>
+	
+	<select id="selectBotRoomList" resultType="CMap">
+	/*selectBotRoomList*/
+		SELECT g.* 
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'HH24'),'00') 		AS elapse_hour
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'mi'),'00') 		as elapse_min
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'ss'),'0') 		as elapse_sec
+		FROM 
+		(
+		SELECT
+			a.CHAT_ROOM_UID
+			, nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'GREETING'), a.ROOM_CREATE_DT) as room_create_dt
+			, nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'END_CHATBOT'), a.LAST_CHAT_DT) as room_end_dt
+			, (
+				nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'END_CHATBOT'), a.LAST_CHAT_DT)
+				- 
+				nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'GREETING'), a.ROOM_CREATE_DT)
+			) * 86400 		AS elapse_time
+			, shfda.fn_getCodeNm('CSTM_LINK_DIV_CD',a.CSTM_LINK_DIV_CD) AS chan_nm
+			, shfda.fn_getCodeNm('END_DIV_CD', a.end_div_cd)										as end_div_nm
+			, (
+				SELECT count(*) FROM shfda.tb_CHAT 
+					WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID 
+						AND BOT_INTENT NOT IN ('ASSIGN_COUNSELOR','CATEGORY','DEFAULT_FALLBACK','END_CHATBOT','GREETING','LOG_CODE_ASSIGN_SCHEDULED','MANAGER_COUNSEL','REQUEST_CHANGE_COUNSELOR','REQUEST_COUNSELOR','SUBMIT_COUNSELOR')
+						AND CNSR_MEMBER_UID IN ('9999999993', '9999999996', '9999999994')
+			) AS block_cnt
+			, shfda.fn_getBlockNm(
+				(SELECT BOT_INTENT from(
+				SELECT BOT_INTENT 
+				FROM shfda.tb_CHAT 
+				WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID
+					AND BOT_INTENT NOT IN ('ASSIGN_COUNSELOR','CATEGORY','DEFAULT_FALLBACK','END_CHATBOT','GREETING','LOG_CODE_ASSIGN_SCHEDULED','MANAGER_COUNSEL','REQUEST_CHANGE_COUNSELOR','REQUEST_COUNSELOR','SUBMIT_COUNSELOR')
+					AND SENDER_DIV_CD = 'R'
+					AND CNSR_MEMBER_UID = '9999999993' ORDER BY REG_DT desc 
+				) WHERE rownum = 1
+			) ) AS req_cns_blk
+			, shfda.fn_getBlockNm(a.FIRST_BOT_INTENT) AS fst_blk_nm
+			, a.coc_id
+			, (SELECT name FROM shfda.tb_CHAT_CSTM_INFO WHERE coc_id = a.COC_ID GROUP BY name) AS name
+			, a.cstm_uid
+			, (SELECT shfda.fn_getCodeNm('AUTH_TYPE_CD', AUTH_TYPE) FROM shfda.tb_HK_MCI_LOGS m WHERE rownum=1 AND ROOM_ID = a.chat_room_uid AND rescd = '0000' AND CNSR_DIV_CD = 'R' AND AUTH_TYPE IS NOT null) AS cert_nm
+			, CASE WHEN (SELECT count(*) FROM shfda.tb_CHAT_ROOM WHERE cstm_uid = a.CSTM_UID) > 1 THEN '재방문' ELSE '신규방문' END AS visit_type
+			, count(1) over() as tot_count
+			, ROW_NUMBER() OVER(ORDER BY a.ROOM_END_DT DESC) AS rnum
+		FROM shfda.tb_CHAT_ROOM a
+			LEFT OUTER JOIN shfda.tb_CHAT_END_INFO b ON (a.CHAT_ROOM_UID = b.CHAT_ROOM_UID)
+
+		WHERE a.END_YN='Y' AND a.ROOM_END_DT >= to_date(#{startDate}, 'yyyymmdd') AND a.ROOM_END_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+				<choose>
+					<when test="linkCd != null">
+					and a.cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+		) g
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)		
+	</select>
+	
+	<select id="selectBotRoomListXsl" resultType="CMap">
+	/*selectBotRoomListXsl*/
+		SELECT g.* 
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'HH24'),'00') 		AS elapse_hour
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'mi'),'00') 		as elapse_min
+		, nvl(to_char(to_date(ceil(mod(elapse_time,86400)),'SSSSS'),'ss'),'0') 		as elapse_sec
+		FROM 
+		(
+		SELECT
+			a.CHAT_ROOM_UID
+			, nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'GREETING'), a.ROOM_CREATE_DT) as room_create_dt
+			, nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'END_CHATBOT'), a.LAST_CHAT_DT) as room_end_dt
+			, (
+				nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'END_CHATBOT'), a.LAST_CHAT_DT)
+				- 
+				nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID=a.CHAT_ROOM_UID AND BOT_INTENT = 'GREETING'), a.ROOM_CREATE_DT)
+			) * 86400 		AS elapse_time
+			, shfda.fn_getCodeNm('CSTM_LINK_DIV_CD',a.CSTM_LINK_DIV_CD) AS chan_nm
+			, shfda.fn_getCodeNm('END_DIV_CD', a.end_div_cd)										as end_div_nm
+			, (
+				SELECT count(*) FROM shfda.tb_CHAT 
+					WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID 
+						AND BOT_INTENT NOT IN ('ASSIGN_COUNSELOR','CATEGORY','DEFAULT_FALLBACK','END_CHATBOT','GREETING','LOG_CODE_ASSIGN_SCHEDULED','MANAGER_COUNSEL','REQUEST_CHANGE_COUNSELOR','REQUEST_COUNSELOR','SUBMIT_COUNSELOR')
+						AND CNSR_MEMBER_UID IN ('9999999993', '9999999996', '9999999994')
+			) AS block_cnt
+			, shfda.fn_getBlockNm(
+				(SELECT BOT_INTENT from(
+				SELECT BOT_INTENT 
+				FROM shfda.tb_CHAT 
+				WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID
+					AND BOT_INTENT NOT IN ('ASSIGN_COUNSELOR','CATEGORY','DEFAULT_FALLBACK','END_CHATBOT','GREETING','LOG_CODE_ASSIGN_SCHEDULED','MANAGER_COUNSEL','REQUEST_CHANGE_COUNSELOR','REQUEST_COUNSELOR','SUBMIT_COUNSELOR')
+					AND SENDER_DIV_CD = 'R'
+					AND CNSR_MEMBER_UID = '9999999993' ORDER BY REG_DT desc 
+				) WHERE rownum = 1
+			) ) AS req_cns_blk
+			, shfda.fn_getBlockNm(a.FIRST_BOT_INTENT) AS fst_blk_nm
+			, a.coc_id
+			, (SELECT name FROM shfda.tb_CHAT_CSTM_INFO WHERE coc_id = a.COC_ID GROUP BY name) AS name
+			, a.cstm_uid
+			, (SELECT shfda.fn_getCodeNm('AUTH_TYPE_CD', AUTH_TYPE) FROM shfda.tb_HK_MCI_LOGS m WHERE rownum=1 AND ROOM_ID = a.chat_room_uid AND rescd = '0000' AND CNSR_DIV_CD = 'R' AND AUTH_TYPE IS NOT null) AS cert_nm
+			, CASE WHEN (SELECT count(*) FROM shfda.tb_CHAT_ROOM WHERE cstm_uid = a.CSTM_UID) > 1 THEN '재방문' ELSE '신규방문' END AS visit_type
+			, count(1) over() as tot_count
+			, ROW_NUMBER() OVER(ORDER BY a.ROOM_END_DT DESC) AS rnum
+		FROM shfda.tb_CHAT_ROOM a
+			LEFT OUTER JOIN shfda.tb_CHAT_END_INFO b ON (a.CHAT_ROOM_UID = b.CHAT_ROOM_UID)
+
+		WHERE a.END_YN='Y' AND a.ROOM_END_DT >= to_date(#{startDate}, 'yyyymmdd') AND a.ROOM_END_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+				<choose>
+					<when test="linkCd != null">
+					and a.cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+		) g
+	</select>
+	
+	<select id="selectMemberInfo" resultType="CMap">
+		/* reporting.selectMemberInfo */
+		select *
+		from shfda.tb_member_info 
+		where member_uid = #{memberUid}
+	</select>
+	
+	<select id="selectSQIList" resultType="CMap">
+		/* reporting.selectSQIList */
+		SELECT 
+			MEMBER_NM
+			, nvl(MANAGER_NM, '-') as MANAGER_NM
+			, round(nvl(s_cnsr_end_cnt, 0), 1) as s_cnsr_end_cnt
+			, CASE WHEN nvl(DECODE(b_cnsr_end_cnt, 0, s_cnsr_end_cnt, NULL, s_cnsr_end_cnt, b_cnsr_end_cnt), 0) = 0 THEN 0
+				ELSE
+				ROUND(
+					(nvl(s_cnsr_end_cnt, 0) - nvl(b_cnsr_end_cnt, 0)) / DECODE(b_cnsr_end_cnt, 0, s_cnsr_end_cnt, NULL, s_cnsr_end_cnt, b_cnsr_end_cnt) * 100
+				, 1) END 						AS cmp_end_cnt
+			, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'HH24'),'00') AS s_assign_fst_time_hour
+			, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'mi'),'00') 	as s_assign_fst_time_min
+			, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'ss'),'00') 	as s_assign_fst_time_sec
+			, CASE WHEN nvl(DECODE(b_assign_fst_time, 0, s_assign_fst_time, NULL, s_assign_fst_time, b_assign_fst_time), 0) = 0 THEN 0
+				ELSE
+				ROUND(
+					(nvl(s_assign_fst_time, 0) - nvl(b_assign_fst_time, 0)) / DECODE(b_assign_fst_time, 0, s_assign_fst_time, NULL, s_assign_fst_time, b_assign_fst_time) * 100
+				, 1)
+				end
+				AS cmp_s_assign_fst_time
+			, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'HH24'),'00') 	AS s_cstm_wait_time_hour
+			, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'mi'),'00') 	as s_cstm_wait_time_min
+			, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'ss'),'00') 	as s_cstm_wait_time_sec
+			, CASE WHEN nvl(DECODE(b_cstm_wait_time, 0, s_cstm_wait_time, NULL, s_cstm_wait_time, b_cstm_wait_time), 0) = 0THEN 0
+				else
+				ROUND(
+					(nvl(s_cstm_wait_time, 0) - nvl(b_cstm_wait_time, 0)) / DECODE(b_cstm_wait_time, 0, s_cstm_wait_time, NULL, s_cstm_wait_time, b_cstm_wait_time) * 100
+				, 1)
+			end
+				AS cmp_s_cstm_wait_time
+			, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'HH24'),'00') 	AS s_cnsr_wait_time_hour
+			, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'mi'),'00') 	as s_cnsr_wait_time_min
+			, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'ss'),'00') 	as s_cnsr_wait_time_sec
+			, CASE WHEN nvl(DECODE(b_cnsr_wait_time, 0, s_cnsr_wait_time, NULL, s_cnsr_wait_time, b_cnsr_wait_time), 0) = 0 THEN 0
+				ELSE 				
+				ROUND(
+					(nvl(s_cnsr_wait_time, 0) - nvl(b_cnsr_wait_time, 0)) / DECODE(b_cnsr_wait_time, 0, s_cnsr_wait_time, NULL, s_cnsr_wait_time, b_cnsr_wait_time) * 100
+				, 1)
+			END
+				AS cmp_s_cnsr_wait_time
+			, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'HH24'),'00') AS s_chat_total_time_hour
+			, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'mi'),'00') 	as s_chat_total_time_min
+			, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'ss'),'00') 	as s_chat_total_time_sec
+			, CASE WHEN nvl(DECODE(b_chat_total_time, 0, s_chat_total_time, NULL, s_chat_total_time, b_chat_total_time), 0) = 0 THEN 0
+				ELSE
+				ROUND(
+					(nvl(s_chat_total_time, 0) - nvl(b_chat_total_time, 0)) / DECODE(b_chat_total_time, 0, s_chat_total_time, NULL, s_chat_total_time, b_chat_total_time) * 100
+				, 1) END						AS cmp_s_chat_total_time
+			, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'HH24'),'00') 		AS s_after_time_hour
+			, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'mi'),'00') 		as s_after_time_min
+			, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'ss'),'00') 		as s_after_time_sec
+			, CASE WHEN nvl(DECODE(b_after_time, 0, s_after_time, NULL, s_after_time, b_after_time), 0) = 0 THEN 0
+				ELSE
+				ROUND(
+					(nvl(s_after_time, 0)-nvl(b_after_time, 0)) / DECODE(b_after_time, 0, s_after_time, NULL, s_after_time, b_after_time) * 100
+				, 1) END 						AS cmp_s_after_time 
+			, tot_count
+			, rnum
+		FROM 
+		(
+			SELECT 
+				(SELECT name FROM shfda.tb_MEMBER_INFO WHERE MEMBER_UID = m.member_uid) AS member_nm
+				, shfda.fn_GETMANAGERNAME(m.member_uid) AS manager_nm
+				, n.s_cnsr_end_cnt 									AS s_cnsr_end_cnt
+				, s_assign_fst_time 	 							AS s_assign_fst_time
+				, s_cstm_wait_time  								AS s_cstm_wait_time
+				, s_cnsr_wait_time  								AS s_cnsr_wait_time
+				, s_chat_total_time 								AS s_chat_total_time
+				, s_after_time  									AS s_after_time
+				, b.*
+				, count(1) over() as tot_count
+				, ROW_NUMBER() OVER(ORDER BY m.member_uid ASC) AS rnum
+			FROM 
+			shfda.tb_MEMBER_INFO m LEFT OUTER JOIN 
+			(
+				SELECT 
+					MEMBER_UID													AS MEMBER_UID		
+					, nvl(sum(CNSR_END_CNT), 0)									AS s_cnsr_end_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / sum(CNSR_END_CNT), 0)			AS s_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS s_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS s_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / sum(CNSR_END_CNT), 0)			AS s_chat_total_time
+					, nvl(sum(AFTER_TIME) / sum(CNSR_END_CNT), 0)				AS s_after_time
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd')  AND STATS_DATE <![CDATA[<]]>= TO_DATE(#{endDate}, 'yyyymmdd')
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+							and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				GROUP BY member_uid
+			)n ON (m.MEMBER_UID = n.member_uid)
+			LEFT OUTER JOIN 
+			(
+				SELECT 
+					MEMBER_UID													AS b_member_uid
+					, nvl(sum(CNSR_END_CNT), 0)									AS b_cnsr_end_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / sum(CNSR_END_CNT), 0)			AS b_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS b_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS b_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / sum(CNSR_END_CNT), 0)			AS b_chat_total_time
+					, nvl(sum(AFTER_TIME) / sum(CNSR_END_CNT), 0)				AS b_after_time
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd') - #{diffDays} AND STATS_DATE <![CDATA[<]]>= TO_DATE(#{endDate}, 'yyyymmdd') - #{diffDays}
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+							and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				GROUP BY member_uid
+			)b on (m.member_uid = b.b_member_uid) 
+			WHERE m.LEAVE_YN = 'N' AND m.VALID_YN = 'Y' AND m.MEMBER_DIV_CD in ('C', 'M') 
+				<if test="departCd != null and departCd != ''">
+					and depart_cd = #{departCd}
+				</if>
+		) t 
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+	</select>
+	
+	
+	<select id="selectSQICnt" resultType="CMap">
+		/* reporting.selectSQICnt */
+		select 
+				nvl(s_cnsr_end_cnt, 0) as s_cnsr_end_cnt
+				, ROUND(nvl((s_cnsr_end_cnt - b_cnsr_end_cnt) 
+					/ decode(b_cnsr_end_cnt, 0, NULL,b_cnsr_end_cnt)  * 100, 100), 1)						AS cmp_end_cnt 
+				, NVL(FLOOR(s_assign_wait_time / 86400), 0) 											AS avg_assign_wait_date 
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_wait_time, 86400)), 'SSSSS'), 'HH24'), 0) 		AS avg_assign_wait_hour 
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_wait_time, 86400)), 'SSSSS'), 'mi'), 0) 		AS avg_assign_wait_min 
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_wait_time, 86400)), 'SSSSS'), 'ss'), 0) 		AS avg_assign_wait_sec 
+				, ROUND(nvl((s_assign_wait_time - b_assign_wait_time) 
+					/ decode(b_assign_wait_time, 0, NULL, b_assign_wait_time) * 100, 100), 1) 			AS cmp_ass_w_time 
+				, ROUND(nvl((s_assign_bfr_cnt + s_assign_aft_cnt) * 100, 100), 1)							AS total_quit_per 
+				, ROUND(nvl(
+						((s_assign_bfr_cnt + s_assign_aft_cnt) - (b_assign_bfr_cnt + b_assign_aft_cnt))
+						/ DECODE((b_assign_bfr_cnt + b_assign_aft_cnt), 0, NULL, (b_assign_bfr_cnt + b_assign_aft_cnt)) * 100
+					, 100), 1) 																			AS cmp_total_quit_per 
+				, ROUND(nvl(s_assign_bfr_cnt * 100, 0), 1)												AS bfr_quit_per 
+				, ROUND(nvl((s_assign_bfr_cnt - b_assign_bfr_cnt)
+					/ DECODE(b_assign_bfr_cnt, 0, NULL, b_assign_bfr_cnt) * 100, 100), 1)					AS cmp_ass_bfr_cnt
+				, ROUND(nvl(s_assign_aft_cnt * 100, 0), 1)												AS aft_quit_per
+				, ROUND(nvl((s_assign_aft_cnt - b_assign_aft_cnt)
+					/ DECODE(b_assign_aft_cnt, 0, NULL, b_assign_aft_cnt) * 100, 100), 1)					AS cmp_ass_aft_cnt
+				, ROUND(s_assign_fst_time, 1)															AS s_assign_fst_time
+				, NVL(FLOOR(s_assign_fst_time / 86400), 0) 												AS avg_assign_fst_date
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_fst_time, 86400)), 'SSSSS'), 'HH24'), '0') 		AS avg_assign_fst_hour
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_fst_time, 86400)), 'SSSSS'), 'mi'), '0') 		AS avg_assign_fst_min
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_assign_fst_time, 86400)), 'SSSSS'), 'ss'), '0') 		AS avg_assign_fst_sec
+				, ROUND(nvl((s_assign_fst_time - b_assign_fst_time) 
+					/ decode(b_assign_fst_time, 0, NULL, b_assign_fst_time) * 100, 100), 1)				AS cmp_ass_frt_time
+				, ROUND(s_cstm_wait_time, 1)															AS s_cstm_wait_time
+				, NVL(FLOOR(s_cstm_wait_time / 86400), 0) 												AS avg_cstm_wait_date
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cstm_wait_time, 86400)), 'SSSSS'), 'HH24'), '0') 		AS avg_cstm_wait_hour
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cstm_wait_time, 86400)), 'SSSSS'), 'mi'), '0') 		AS avg_cstm_wait_min
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cstm_wait_time, 86400)), 'SSSSS'), 'ss'), '0')			AS avg_cstm_wait_sec
+				, ROUND(nvl((s_cstm_wait_time - b_cstm_wait_time) 
+					/ DECODE(b_cstm_wait_time, 0, NULL, b_cstm_wait_time) * 100, 100), 1)					AS cmp_cstm_w_time
+				, ROUND(s_cnsr_wait_time, 1)  															AS s_cnsr_wait_time
+				, NVL(FLOOR(s_cnsr_wait_time / 86400), 0) 												AS avg_cnsr_wait_date
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cnsr_wait_time, 86400)), 'SSSSS'), 'HH24'), '0')		AS avg_cnsr_wait_hour
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cnsr_wait_time, 86400)), 'SSSSS'), 'mi'), '0') 		AS avg_cnsr_wait_min
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_cnsr_wait_time, 86400)), 'SSSSS'), 'ss'), '0') 		AS avg_cnsr_wait_sec
+				, ROUND(nvl((s_cnsr_wait_time - b_cnsr_wait_time) 
+					/ DECODE(b_cnsr_wait_time, 0, NULL, b_cnsr_wait_time) * 100, 100), 1)					AS cmp_cnsr_w_time
+				, ROUND(s_chat_total_time, 1)															AS s_chat_total_time
+				, NVL(FLOOR(s_chat_total_time / 86400), 0) 												AS avg_chat_tot_date
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_chat_total_time, 86400)), 'SSSSS'), 'HH24'), '0') 		AS avg_chat_tot_hour
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_chat_total_time, 86400)), 'SSSSS'), 'mi'), '0') 		AS avg_chat_tot_min
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_chat_total_time, 86400)), 'SSSSS'), 'ss'), '0') 		AS avg_chat_tot_sec
+				, ROUND(nvl((s_chat_total_time - b_chat_total_time) / DECODE(b_chat_total_time, 0, NULL, b_chat_total_time) * 100, 100), 1) 	AS cmp_chat_tot_time
+				, ROUND(s_after_time, 1)																AS s_after_time
+				, NVL(FLOOR(s_after_time / 86400), 0) 													AS avg_after_date
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_after_time, 86400)), 'SSSSS'), 'HH24'), '0') 			AS avg_after_hour
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_after_time, 86400)), 'SSSSS'), 'mi'), '0') 			AS avg_after_min
+				, NVL(TO_CHAR(TO_DATE(CEIL(MOD(s_after_time, 86400)), 'SSSSS'), 'ss'), '0')				AS avg_after_sec
+				, ROUND(NVL((s_after_time - b_after_time) / DECODE(b_after_time, 0, NULL,b_after_time)  * 100, 100), 1) AS cmp_after_time
+			FROM 
+			(
+				SELECT 
+					sum(CNSR_END_CNT)									AS s_cnsr_end_cnt
+					, nvl(sum(ASSIGN_WAIT_TIME) / count(1), 0)			AS s_assign_wait_time
+					, nvl(sum(ASSIGN_BFR_END_CNT) / count(1), 0)		AS s_assign_bfr_cnt
+					, nvl(sum(ASSIGN_AFT_END_CNT) / count(1), 0)		AS s_assign_aft_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / count(1), 0)			AS s_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / count(1), 0)			AS s_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / count(1), 0)			AS s_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / count(1), 0)			AS s_chat_total_time
+					, nvl(sum(AFTER_TIME) / count(1), 0)				AS s_after_time
+					, 'TTT' AS jkey
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd')  AND STATS_DATE <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') + 1
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+							and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+			)n,
+			(
+				SELECT 
+					sum(CNSR_END_CNT) 									AS b_cnsr_end_cnt
+					, nvl(sum(ASSIGN_WAIT_TIME) / count(1), 0)			AS b_assign_wait_time
+					, nvl(sum(ASSIGN_BFR_END_CNT) / count(1), 0)		AS b_assign_bfr_cnt
+					, nvl(sum(ASSIGN_AFT_END_CNT) / count(1), 0)		AS b_assign_aft_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / count(1), 0)			AS b_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / count(1), 0)			AS b_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / count(1), 0)			AS b_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / count(1), 0)			AS b_chat_total_time
+					, nvl(sum(AFTER_TIME) / count(1), 0)				AS b_after_time
+					, 'TTT'												AS jkey
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd') - #{diffDays} AND STATS_DATE <![CDATA[<]]> TO_DATE(#{endDate}, 'yyyymmdd') - #{diffDays} + 1
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+						and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+						#{item}
+						</foreach>
+					</when>
+				</choose>		
+			)b WHERE n.jkey = b.jkey
+	</select>
+	<select id="selectSQIListExcel" resultType="CMap">
+		/* reporting.selectSQIListExcel */
+		SELECT 
+			MEMBER_NM
+ 				, nvl(MANAGER_NM, '-') as MANAGER_NM
+				, round(s_cnsr_end_cnt, 1) as s_cnsr_end_cnt
+				, ROUND(
+						nvl((s_cnsr_end_cnt - b_cnsr_end_cnt) / DECODE(b_cnsr_end_cnt, 0, NULL, b_cnsr_end_cnt) * 100, 0)
+					, 1)						AS cmp_end_cnt
+				, ROUND(s_assign_fst_time, 1)													AS xsl_s_assign_fst_time
+				, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'HH24'),'00') AS s_assign_fst_time_hour
+				, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'mi'),'00') 	as s_assign_fst_time_min
+				, nvl(to_char(to_date(ceil(mod(s_assign_fst_time,86400)),'SSSSS'),'ss'),'00') 	as s_assign_fst_time_sec
+				, ROUND(
+						nvl((s_assign_fst_time - b_assign_fst_time) / DECODE(b_assign_fst_time, 0, NULL, b_assign_fst_time) * 100, 0)
+					, 1) 						AS cmp_s_assign_fst_time
+				, ROUND(s_cstm_wait_time, 1)													AS xsl_s_cstm_wait_time
+				, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'HH24'),'00') 	AS s_cstm_wait_time_hour
+				, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'mi'),'00') 	as s_cstm_wait_time_min
+				, nvl(to_char(to_date(ceil(mod(s_cstm_wait_time,86400)),'SSSSS'),'ss'),'00') 	as s_cstm_wait_time_sec
+				,ROUND(
+						nvl((s_cstm_wait_time - b_cstm_wait_time) / DECODE(b_cstm_wait_time, 0, NULL, b_cstm_wait_time) * 100, 0)
+					, 1)						AS cmp_s_cstm_wait_time
+				, ROUND(s_cnsr_wait_time, 1)													AS xsl_s_cnsr_wait_time
+				, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'HH24'),'00') 	AS s_cnsr_wait_time_hour
+				, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'mi'),'00') 	as s_cnsr_wait_time_min
+				, nvl(to_char(to_date(ceil(mod(s_cnsr_wait_time,86400)),'SSSSS'),'ss'),'00') 	as s_cnsr_wait_time_sec
+				, ROUND(
+						nvl((s_cnsr_wait_time - b_cnsr_wait_time) / DECODE(b_cnsr_wait_time, 0, NULL, b_cnsr_wait_time) * 100, 0)
+					, 1)						AS cmp_s_cnsr_wait_time
+				, ROUND(s_chat_total_time, 1)													AS xsl_s_chat_total_time
+				, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'HH24'),'00') AS s_chat_total_time_hour
+				, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'mi'),'00') 	as s_chat_total_time_min
+				, nvl(to_char(to_date(ceil(mod(s_chat_total_time,86400)),'SSSSS'),'ss'),'00') 	as s_chat_total_time_sec
+				, ROUND(
+						nvl((s_chat_total_time - b_chat_total_time) / DECODE(b_chat_total_time, 0, NULL, b_chat_total_time) * 100, 0)
+					, 1)						AS cmp_s_chat_total_time
+				, ROUND(s_after_time , 1)														AS xsl_s_after_time
+				, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'HH24'),'00') 		AS s_after_time_hour
+				, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'mi'),'00') 		as s_after_time_min
+				, nvl(to_char(to_date(ceil(mod(s_after_time,86400)),'SSSSS'),'ss'),'00') 		as s_after_time_sec
+				, ROUND(
+						nvl((s_after_time-b_after_time) / DECODE(b_after_time, 0, NULL, b_after_time) * 100, 0)
+					, 1)						AS cmp_s_after_time 
+				, tot_count
+				, rnum
+		FROM 
+		(
+			SELECT 
+				(SELECT name FROM shfda.tb_MEMBER_INFO WHERE MEMBER_UID = n.member_uid) AS member_nm
+				, shfda.fn_GETMANAGERNAME(n.member_uid) AS manager_nm
+				, n.s_cnsr_end_cnt 									AS s_cnsr_end_cnt
+				, s_assign_fst_time 	 							AS s_assign_fst_time
+				, s_cstm_wait_time  								AS s_cstm_wait_time
+				, s_cnsr_wait_time  								AS s_cnsr_wait_time
+				, s_chat_total_time 								AS s_chat_total_time
+				, s_after_time  									AS s_after_time
+				, b.*
+				, count(1) over() as tot_count
+				, ROW_NUMBER() OVER(ORDER BY n.member_uid ASC) AS rnum
+			FROM 
+			(
+				SELECT 
+					MEMBER_UID																			AS MEMBER_UID		
+					, sum(CNSR_END_CNT)																AS s_cnsr_end_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / sum(CNSR_END_CNT), 0)			AS s_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS s_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS s_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / sum(CNSR_END_CNT), 0)			AS s_chat_total_time
+					, nvl(sum(AFTER_TIME) / sum(CNSR_END_CNT), 0)					AS s_after_time
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd')  AND STATS_DATE <![CDATA[<]]>= TO_DATE(#{endDate}, 'yyyymmdd')
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+							and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				GROUP BY member_uid
+			)n,
+			(
+				SELECT 
+					MEMBER_UID																			AS b_member_uid
+					, sum(CNSR_END_CNT) 															AS b_cnsr_end_cnt
+					, nvl(sum(ASSIGN_FST_TIME) / sum(CNSR_END_CNT), 0)			AS b_assign_fst_time
+					, nvl(sum(CSTM_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS b_cstm_wait_time
+					, nvl(sum(CNSR_WAIT_TIME) / sum(CNSR_END_CNT), 0)			AS b_cnsr_wait_time
+					, nvl(sum(CHAT_TOTAL_TIME) / sum(CNSR_END_CNT), 0)			AS b_chat_total_time
+					, nvl(sum(AFTER_TIME) / sum(CNSR_END_CNT), 0)					AS b_after_time
+				FROM shfda.tb_STATS_SQI 
+				WHERE STATS_DATE >= to_date(#{startDate}, 'yyyymmdd') - #{diffDays} AND STATS_DATE <![CDATA[<]]>= TO_DATE(#{endDate}, 'yyyymmdd') - #{diffDays}
+				<if test="departCd != null and departCd != ''"> 
+				 	and depart_cd = #{departCd}
+				 </if>
+				<choose>
+					<when test="categoryArray != null">
+							and CTG_NUM in
+						<foreach collection="categoryArray" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>		
+				<choose>
+					<when test="linkCd != null">
+							and cstm_link_div_cd in
+						<foreach collection="linkCd" item="item" index="key" open="(" close=")" separator=", ">
+							#{item}
+						</foreach>
+					</when>
+				</choose>
+				GROUP BY member_uid
+			)b
+			where (n.member_uid = b.b_member_uid) 
+		) t 
+	</select>
+	
+	<select id="selectTermRankDay" resultType="CMap">
+		/* reporting.selectTermRankDay */
+		SELECT	ranking,
+				search_text
+		FROM	shfda.tb_term_batch_day
+		WHERE	job_dt = #{regDate}
+		AND		type = #{type}
+		order by ranking, search_text
+	</select>
+	
+	<select id="selectTermRankMon" resultType="CMap">
+		/* reporting.selectTermRankMon */
+		SELECT	ranking,
+				search_text
+		FROM	shfda.tb_term_batch_mon
+		WHERE	job_dt = #{jobDt}
+		AND		type = #{type}
+		order by ranking, search_text
+	</select>
+</mapper>

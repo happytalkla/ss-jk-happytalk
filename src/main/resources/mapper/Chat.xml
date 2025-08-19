@@ -1,0 +1,1538 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chat">
+
+	<sql id="chatRoomConditions">
+		<if test="chatRoomUid != null">
+			and r.chat_room_uid = #{chatRoomUid}
+		</if>
+		<if test="chatRoomUidList != null">
+			and r.chat_room_uid in
+			<foreach collection="chatRoomUidList" item="item" open="(" separator="," close=")">
+				#{item} 
+			</foreach>
+		</if>
+		<if test="managerUid != null">
+			and r.manager_uid = #{managerUid}
+		</if>
+		<if test="managerUidList != null">
+			and r.manager_uid in
+			<foreach collection="managerUidList" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="memberUid != null">
+			and r.member_uid = #{memberUid}
+		</if>
+		<if test="memberUidList != null">
+			and r.member_uid in
+			<foreach collection="memberUidList" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="chatRoomStatusCd != null">
+			and r.chat_room_status_cd = #{chatRoomStatusCd}
+		</if>
+		<if test="chatRoomStatusCdList != null">
+			and r.chat_room_status_cd in
+			<foreach collection="chatRoomStatusCdList" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="cstmUid != null">
+			and r.cstm_uid = #{cstmUid}
+		</if>
+		<if test="cnsrDivCd != null">
+			and r.cnsr_div_cd = #{cnsrDivCd}
+		</if>
+		<if test="cnsrLinkDtNotNull != null">
+			and r.cnsr_link_dt is not null
+		</if>
+		<if test="senderDivCd != null">
+			and r.sender_div_cd = #{senderDivCd}
+		</if>
+		<if test="senderDivCdNot != null">
+			and r.sender_div_cd != #{senderDivCdNot}
+		</if>
+		<if test="cstmReplyDelayYn != null">
+			and r.cstm_reply_delay_yn = #{cstmReplyDelayYn}
+		</if>
+		<if test="lastChatDtLt != null">
+			and r.last_chat_dt + ((1/24/60) * #{lastChatDtLt}) &lt;= sysdate
+		</if>
+		<if test="endYn != null">
+			and r.end_yn = #{endYn}
+		</if>
+		<if test="todayYn != null and dateSrch == null">
+			and r.room_create_dt &gt;= trunc(sysdate - 1)
+		</if>
+		<if test="oldYn != null and dateSrch == null">
+			and r.room_create_dt &lt; trunc(sysdate - 2)
+		</if>
+		<if test="cstmDelYn != null">
+			and r.cstm_del_yn = #{cstmDelYn}
+		</if>
+		<if test="ctgNum != null">
+			and r.ctg_num = #{ctgNum}
+		</if>
+		<if test="cstmLinkDivCd != null">
+			and r.cstm_link_div_cd = #{cstmLinkDivCd}
+		</if>
+		<if test="goodCode != null">
+			and r.good_code = #{goodCode}
+		</if>		
+	</sql>
+	
+	<resultMap id="clobCMap" type="CMap">
+		<result property="cont" column="cont" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="cont_text" column="cont_text" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="last_cont_text" column="last_cont_text" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="last_chat_cont" column="last_chat_cont" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="question" column="question" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+		<result property="answer" column="answer" jdbcType="CLOB" javaType="java.lang.String" typeHandler="org.apache.ibatis.type.ClobTypeHandler"/>
+	</resultMap>
+
+	<select id="selectChatMessage" resultMap="clobCMap">
+		/* chat.selectChatMessage */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select 
+		    X.CHAT_NUM,
+		    X.CHAT_ROOM_UID,
+		    X.CNSR_MEMBER_UID,
+		    X.SENDER_DIV_CD,
+		    X.SENDER_UID,
+		    (SELECT NAME FROM shfda.tb_MEMBER_INFO WHERE MEMBER_UID = X.SENDER_UID) AS MEMBER_NAME,
+		    X.AVATAR_CD,
+		    X.CONT_DIV_CD,
+		    X.CONT,
+		    X.CONT_TEXT,
+		    X.MSG_STATUS_CD,
+		    X.REG_DT,
+		    X.BOT_CATEGORY_1,
+		    X.BOT_CATEGORY_2,
+		    X.BOT_CATEGORY_3,
+		    X.BOT_INTENT,
+		    X.REL_CHAT_NUM,
+		    X.EVL_TYPE_CD
+		FROM (
+		SELECT * FROM shfda.tb_CHAT
+		<where>
+			<if test="chatNum != null">
+				AND CHAT_NUM = #{chatNum}
+			</if>
+			<if test="chatNumLt != null">
+				AND CHAT_NUM &lt; #{chatNumLt}
+			</if>
+			<if test="chatNumGt != null">
+				AND CHAT_NUM &gt; #{chatNumGt}
+			</if>
+			<if test="chatRoomUid != null">
+				AND CHAT_ROOM_UID = #{chatRoomUid}
+			</if>
+			<if test="contDivCd != null">
+				AND CONT_DIV_CD = #{contDivCd}
+			</if>
+			<if test="contDivCdNot != null">
+				AND CONT_DIV_CD != #{contDivCdNot}
+			</if>
+			<if test="contDivCdNotIn != null">
+				AND CONT_DIV_CD NOT IN
+				<foreach collection="contDivCdNotIn" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		<if test="sorter != null">
+			ORDER BY ${sorter}
+		</if>
+		) X
+		<if test="size != null">
+			WHERE ROWNUM &lt;= #{size}
+		</if>
+	</select>
+	
+	<select id="selectChatPrevMessage" resultMap="clobCMap">
+		/*chat.selectChatPrevMessage*/
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+ 		SELECT X.* FROM (
+		    SELECT 
+		        	Z.CHAT_NUM,
+				    Z.CHAT_ROOM_UID,
+				    Z.CNSR_MEMBER_UID,
+				    Z.SENDER_DIV_CD,
+				    Z.SENDER_UID,
+				    (SELECT NAME FROM shfda.tb_MEMBER_INFO WHERE MEMBER_UID = Z.SENDER_UID) AS MEMBER_NAME,
+				    Z.AVATAR_CD,
+				    Z.CONT_DIV_CD,
+				    Z.CONT,
+				    Z.CONT_TEXT,
+				    Z.MSG_STATUS_CD,
+				    Z.REG_DT,
+				    Z.BOT_CATEGORY_1,
+				    Z.BOT_CATEGORY_2,
+				    Z.BOT_CATEGORY_3,
+				    Z.BOT_INTENT,
+				    Z.REL_CHAT_NUM,
+				    Z.EVL_TYPE_CD
+		    FROM 
+		        shfda.tb_CHAT Z
+		    WHERE		     
+		        CHAT_ROOM_UID IN (
+		            SELECT 
+		                CHAT_ROOM_UID 
+		            FROM 
+		                shfda.tb_CHAT_ROOM T1
+		                ,shfda.tb_CHAT_CSTM_INFO T2
+		            WHERE 
+		                T1.CSTM_UID          = T2.CSTM_UID(+)
+		            AND T1.CSTM_LINK_DIV_CD  = T2.CSTM_LINK_DIV_CD(+)
+		            AND T1.CHAT_ROOM_UID    != #{chatRoomUid}
+		            AND T1.CSTM_UID          = #{cstmUid}
+		        )
+		    ORDER BY Z.REG_DT DESC
+		    ) X 
+		WHERE 
+		    ROWNUM &lt;= #{size}
+	</select>
+
+	<insert id="insertChatMessage">
+		/* chat.insertChatMessage */
+		<!--selectKey keyProperty="chatNum, regDt" resultType="CMap" order="BEFORE">
+			select shfda.seq_chat_num.nextval as chatNum, sysdate as regDt from dual
+		</selectKey-->
+		<selectKey keyProperty="chatNum" resultType="Long" order="BEFORE">
+			select shfda.seq_chat_num.nextval as chatNum from dual
+		</selectKey>
+		insert into shfda.tb_chat (
+		chat_num,
+		chat_room_uid,
+		sender_div_cd,
+		sender_uid,
+		cnsr_member_uid,
+		cont_div_cd,
+		cont,
+		cont_text,
+		msg_status_cd,
+		reg_dt,
+		rel_chat_num,
+		bot_category_1,
+		bot_category_2,
+		bot_category_3,
+		bot_intent,
+		avatar_cd
+		)
+		values (
+		#{chatNum},
+		#{chatRoomUid},
+		#{senderDivCd},
+		#{senderUid},
+		#{cnsrMemberUid},
+		#{contDivCd},
+		#{cont},
+		#{contText},
+		#{msgStatusCd},
+		sysdate,
+		#{relChatNum},
+		#{botCategory1},
+		#{botCategory2},
+		#{botCategory3},
+		#{botIntent},
+		#{avatarCd}
+		)
+	</insert>
+
+	<update id="updateChatMessage">
+		/* chat.updateChatMessage */
+		update shfda.tb_chat
+		<set>
+			<if test="msgStatusCd != null">
+				msg_status_cd = #{msgStatusCd},
+			</if>
+			<if test="cont != null">
+				cont = #{cont},
+			</if>
+			<if test="contText != null">
+				cont_text = #{contText},
+			</if>
+		</set>
+		<where>
+			<if test="chatNum != null">
+				and chat_num = #{chatNum}
+			</if>
+			<if test="shrChatRoomUid != null">
+				and chat_room_uid = #{shrChatRoomUid}
+			</if>
+			<if test="shrSenderUidNot != null">
+				and sender_uid != #{shrSenderUidNot}
+			</if>
+			<!-- if test="shrSenderUidNotOrNull != null">
+			and (sender_uid != #{shrSenderUidNotOrNull} or sender_uid is null)
+			</if -->
+			<if test="shrChatNumLessEqual != null">
+				and chat_num &lt;= #{shrChatNumLessEqual}
+			</if>
+			<if test="shrMsgStatusCdList != null">
+				and msg_status_cd in
+				<foreach collection="shrMsgStatusCdList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+	</update>
+
+	<delete id="deleteChatMessage">
+		/* chat.deleteChatMessage */
+		delete from shfda.tb_chat
+		where
+		<if test="chatNum != null">
+			chat_num = #{chatNum}
+		</if>
+		<if test="chatRoomUid != null">
+			chat_room_uid = #{chatRoomUid}
+		</if>
+	</delete>
+
+	<select id="selectChatRoomStatusCounter" resultType="CMap">
+		/* chat.selectChatRoomStatusCounter */
+		select
+		/* 봇 상담중 */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdAssignBot}
+				and member_uid in
+				<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+				and room_create_dt &gt;= trunc(sysdate - 1)
+		) as assign_bot,
+
+		/* 봇 종료 */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdEnd}
+				and member_uid in
+				<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+				<if test="'C'.toString() == rollType">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+				<if test="'C'.toString() != rollType">
+				and room_create_dt &gt;= trunc(sysdate)
+				</if>
+		) as end_bot
+
+		from dual
+	</select>
+
+	<select id="selectChatRoomStatusCounterByMemberUid" resultType="CMap">
+		/* chat.selectChatRoomStatusCounterByMemberUid */
+		select
+
+		/* 미배정 (상담원 배정 대기) */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdWaitCounselor}
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+				<if test = "dateSrch == null">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+		) as wait_counselor,
+
+		/* 미접수 (읽지않은 대화방) */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdAssign}
+				<if test="managerUidList != null">
+					and manager_uid in
+					<foreach collection="managerUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+				<if test="managerUidList == null">
+					<if test="managerUid != null">
+						and manager_uid = #{managerUid}
+					</if>
+				</if>
+				<if test="memberUidList != null">
+					and member_uid in
+					<foreach collection="memberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+				<if test="memberUidList == null">
+					<if test="memberUid != null">
+						and member_uid = #{memberUid}
+					</if>
+				</if>
+				<if test = "dateSrch == null">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+				
+		) as assign_counselor,
+
+		/* 진행중 - 응대 필요 */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdNeedAnswer}
+				<if test="managerUid != null">
+					and manager_uid = #{managerUid}
+				</if>
+				<if test="memberUid != null">
+					and member_uid = #{memberUid}
+				</if>
+				<if test = "dateSrch == null">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+		) as need_answer,
+
+		/* 진행중 - 고객 답변 대기중 */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdWaitReply}
+				<if test="managerUid != null">
+					and manager_uid = #{managerUid}
+				</if>
+				<if test="memberUid != null">
+					and member_uid = #{memberUid}
+				</if>
+				<if test="dateSrch == null">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+		) as wait_reply,
+
+		/* 상담 종료 */
+		(
+			select count(*)
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = #{statusCdEnd}
+				and cnsr_div_cd = 'C'
+				AND END_DIV_CD IN ('C_CNSR','C_CSTM_WAIT_CNSR','C_CSTM_ASSIGN_CNSR','C_TIME', 'C_CSTM')
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+				<if test="managerUid != null">
+					and manager_uid = #{managerUid}
+				</if>
+				<if test="memberUid != null">
+					and member_uid = #{memberUid}
+				</if>
+				<if test="pageType != null">
+					and member_uid = #{managerUid}
+					and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+				<if test="'C'.toString() == rollType">
+				and room_create_dt &gt;= trunc(sysdate - 1)
+				</if>
+				<if test="'C'.toString() != rollType and pageType == null">
+				and room_create_dt &gt;= trunc(sysdate)
+				</if>
+		) as end_counselor
+
+		from dual
+	</select>
+
+	<select id="selectChatRoomExtraStatusCounterByMemberUid" resultType="CMap">
+		/* chat.selectChatRoomExtraStatusCounterByMemberUid */
+		select
+		/* 상담원 변경 요청 */
+		(
+			select count(*)
+			from shfda.tb_chat_cnsr_chng_req a
+			inner join (
+				select chat_room_uid from shfda.tb_chat_room
+				where
+					room_create_dt &gt;= trunc(sysdate - 1)
+					<if test="departCd != null">
+					and depart_cd = #{departCd}
+					</if>
+					<if test="departCd == null">
+						<if test="managerUid != null">
+						and manager_uid = #{managerUid}
+						</if>
+					</if>
+			) b
+			on a.chat_room_uid = b.chat_room_uid
+			where
+				appr_yn = 'N'
+				and req_type = 'CHANGE_COUNSELOR'
+		) as request_change_counselor,
+
+		/* 매니저 상담 요청 */
+		(
+			select count(*)
+			from shfda.tb_chat_cnsr_chng_req a
+			inner join (
+				select chat_room_uid from shfda.tb_chat_room
+				where
+					room_create_dt &gt;= trunc(sysdate - 1)
+					<if test="departCd != null">
+					and depart_cd = #{departCd}
+					</if>
+					<if test="departCd == null">
+						<if test="managerUid != null">
+						and manager_uid = #{managerUid}
+						</if>
+					</if>
+			) b
+			on a.chat_room_uid = b.chat_room_uid
+			where
+				appr_yn = 'N'
+				and req_type = 'MANAGER_COUNSEL'
+		) as request_manager_counsel,
+
+		/* 코끼리 등록 요청 */
+		(
+			select count(*)
+			from shfda.tb_chat_cnsr_chng_req a
+			inner join (
+				select chat_room_uid from shfda.tb_chat_room
+				where
+					room_create_dt &gt;= trunc(sysdate - 1)
+					<if test="departCd != null">
+					and depart_cd = #{departCd}
+					</if>
+					<if test="departCd == null">
+						<if test="managerUid != null">
+						and manager_uid = #{managerUid}
+						</if>
+					</if>
+			) b
+			on a.chat_room_uid = b.chat_room_uid
+			where
+				appr_yn = 'N'
+				and req_type = 'ASSIGN_CUSTOMER_GRADE'
+		) as request_cstm_grade,
+
+		/* 리뷰 요청 */
+		(
+			select count(*)
+			from shfda.tb_chat_cont_review a
+			inner join (
+				select chat_room_uid from shfda.tb_chat_room
+				where
+					room_create_dt &gt;= trunc(sysdate - 1)
+					<if test="departCd != null">
+					and depart_cd = #{departCd}
+					</if>
+					<if test="departCd == null">
+						<if test="managerUid != null">
+						and manager_uid = #{managerUid}
+						</if>
+					</if>
+			) b
+			on a.chat_room_uid = b.chat_room_uid
+			where
+				comp_yn = 'N'
+		) as request_review
+		from dual
+	</select>
+
+	<select id="selectChatRoom" resultMap="clobCMap">
+		/* chat.selectChatRoom */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select
+		 room.*
+		<!-- , room.coc_id as room_coc_id -->
+		, nvl(room.coc_id, '미로그인') as room_coc_id
+		, room.coc_nm as room_coc_nm
+		, member.depart_nm
+		, shfda.fn_getcodenm('CHAT_ROOM_STATUS_CD', room.chat_room_status_cd) as chat_room_status_cd_nm
+		, shfda.fn_getcodenm('CNSR_DIV_CD', room.cnsr_div_cd) as cnsr_div_cd_nm
+		, shfda.fn_getcodenm('END_DIV_CD', room.end_div_cd) as end_div_cd_nm
+		, shfda.fn_getcodenm('CSTM_OS_DIV_CD', room.cstm_os_div_cd) as cstm_os_div_cd_nm
+		, shfda.fn_getcodenm('CSTM_LINK_DIV_CD', room.cstm_link_div_cd) as cstm_link_div_cd_nm
+		, shfda.fn_getcodenm('AUTH_TYPE_CD', room.auth_type) as auth_type_name
+		, shfda.fn_getcodenm('AUTH_POSITION_CD', room.auth_position) as auth_position_name
+		, member.name as member_name
+		, member.coc_id as member_coc_id
+		, (select nvl(max(t2.img_class_name), '0')
+			from shfda.tb_chat_pass_time t2
+			where
+				t2.use_yn = 'Y'
+				and to_number(trunc(24 * 60 * (sysdate - room.room_create_dt), 0) ) &gt;=
+					to_number(t2.pass_time)
+		) as pass_hours
+		, mark.img_class_name as mark_img_class_name
+		, mark.mark_desc
+		, cstm.coc_id as cstm_coc_id
+		, cstm.coc_nm as cstm_coc_nm
+		, cstm.name as cstm_name
+		, cstm.sex as cstm_sex
+		, cstm.birth_date as cstm_birth_date
+		, cstm.cstm_div_cd
+		, cstm.cstm_link_customer_uid
+		, cstm.grade_memo
+		, grade.img_class_name as grade_img_class_name
+		, grade.grade_nm
+		, cstm.coc_type_nm as cstm_coc_type_nm
+		, cns_evl.evl_cont
+		, cns_evl.evl_score
+		, end.dep_2_ctg_cd as end_ctg_cd
+		, end.memo as end_memo
+		, req.req_type as manager_counsel_img_class_name
+		<if test="withMetaInfo != null">
+			, c2.ctg_nm as ctg_nm_1
+			, c1.ctg_nm as ctg_nm_2
+			, ce.dep_1_ctg_cd as end_ctg_cd_1
+			, ce.dep_2_ctg_cd as end_ctg_cd_2
+			, ce.dep_3_ctg_cd as end_ctg_cd_3
+			, ce.dep_4_ctg_cd as end_ctg_cd_4
+			, ce.dep_1_ctg_nm as end_ctg_nm_1
+			, ce.dep_2_ctg_nm as end_ctg_nm_2
+			, ce.dep_3_ctg_nm as end_ctg_nm_3
+			, ce.dep_4_ctg_nm as end_ctg_nm_4
+		</if>
+		<if test="withCustomerLastChat != null">
+			, CHAT.CONT_TEXT AS LAST_CONT_TEXT
+		</if>
+		
+		
+		, (
+		SELECT
+			SCREEN_NAME
+		FROM
+			shfda.tb_O2_APP
+		WHERE
+			SCREEN_NUM = SUBSTR(room.ENTRANCE_CODE, 0, 4)
+ 		) AS SCREEN_NAME
+		
+		
+		<if test="senderUid != null">
+		, (SELECT NAME FROM shfda.tb_MEMBER_INFO WHERE MEMBER_UID = #{senderUid}) as sender_name  
+		</if>
+		
+		from (
+			select x.*
+			from (
+				select rownum as rnum, a.*
+				from (
+					select r.CHAT_ROOM_UID, r.MANAGER_UID, r.MEMBER_UID, r.CSTM_UID
+					,r.ROOM_TITLE, r.FRT_CNSR_DIV_CD, r.CNSR_DIV_CD, r.CSTM_OS_DIV_CD, r.CSTM_LINK_DIV_CD, r.CHAT_ROOM_STATUS_CD
+					, r.ROOM_MARK_NUM, r.ROOM_CREATE_DT, r.CNSR_LINK_DT, r.LAST_CHAT_NUM, r.LAST_CHAT_DT, r.END_YN, r.ROOM_END_DT
+					, r.END_DIV_CD, r.CSTM_REPLY_DELAY_YN, r.SENDER_DIV_CD, r.LAST_CHAT_CONT AS LAST_CHAT_CONT, r.CTG_NUM,r.CSTM_DEL_YN
+					, r.BOT_PROJECT_ID, r.BOT_SESSION_KEY, r.DEPART_CD, r.ENTRANCE_CODE, r.COC_ID, r.AUTH_TYPE
+					, r.AUTH_POSITION, r.END_REVIEW_DT, r.FIRST_BOT_INTENT,r.COC_NM
+					,case when sysdate - r.room_end_dt > 30 then 'y' else 'n' end as chk30days
+					, r.GOOD_CODE
+					from shfda.tb_chat_room r
+				<where>
+					<include refid="chatRoomConditions"/>
+				</where>
+				<if test="sorter != null">
+					order by ${sorter}
+				</if>
+				) a
+				<if test="page != null">
+				where rownum &lt;= #{page} * #{size}
+				</if>
+			) x
+			<if test="page != null">
+			where x.rnum &gt;= (#{page} - 1) * #{size} + 1
+			</if>
+		) room
+
+		left join shfda.tb_member_info member
+		on room.member_uid = member.member_uid
+
+		left join shfda.tb_chat_cstm_info cstm
+		on room.cstm_uid = cstm.cstm_uid
+
+		left join shfda.tb_cstm_grade grade
+		on cstm.grade_num = grade.grade_num
+
+		left join shfda.tb_room_mark mark
+		on room.room_mark_num = mark.room_mark_num
+
+		left join shfda.tb_cns_evl cns_evl
+		on room.chat_room_uid = cns_evl.chat_room_uid
+
+		left join shfda.tb_chat_end_info end
+		on room.chat_room_uid = end.chat_room_uid
+
+		left join (
+			select rownum as rnum, a.*
+			from shfda.tb_chat_cnsr_chng_req a
+			where
+				a.req_type = 'MANAGER_COUNSEL'
+			order by a.chng_req_num desc
+		) req
+		on room.chat_room_uid = req.chat_room_uid and req.rnum = 1
+
+		<if test="withMetaInfo != null">
+		inner join (select ctg_mgt_dpt
+					from shfda.tb_set
+					where 1=1
+					<if test="departCd != null and departCd != ''">
+						and depart_cd = #{departCd}
+					</if>
+						and rownum = 1) setting on (1=1)
+		left join shfda.tb_ctg_info c1 on (room.ctg_num = c1.ctg_num)
+		left join shfda.tb_ctg_info c2 on (c1.upper_ctg_num = c2.ctg_num)
+		left join shfda.tb_ctg_info c3 on (c2.upper_ctg_num = c3.ctg_num)
+		left join shfda.tb_chat_end_info ce on (room.chat_room_uid = ce.chat_room_uid)
+		</if>
+
+		<if test="withCustomerLastChat != null">
+		left join shfda.tb_chat chat
+		on chat.chat_num = (select max(chat_num)
+			from shfda.tb_chat x
+			where
+				x.sender_div_cd = 'U'
+				and x.chat_room_uid = room.chat_room_uid)
+		</if>
+
+		order by room.rnum
+	</select>
+
+	<select id="selectChatRoomCount" resultType="Int">
+		/* chat.selectChatRoomCount */
+		select count(*)
+		from shfda.tb_chat_room r
+		<where>
+			<include refid="chatRoomConditions"/>
+		</where>
+	</select>
+	<select id="selectChatRoomGoodCode" resultType="CMap">
+		/* chat.selectChatRoomGoodCode */
+		select good_code,
+		CASE WHEN SUBSTR(ENTRANCE_CODE, 0, INSTR(ENTRANCE_CODE, '|', 1, 1)-1) IS NOT NULL THEN SUBSTR(ENTRANCE_CODE, 0, INSTR(ENTRANCE_CODE, '|', 1, 1)-1)
+		ELSE ENTRANCE_CODE END 		AS app_code
+		from shfda.tb_chat_room r WHERE 1=1
+		AND chat_room_uid = #{chatRoomUid}
+	</select>
+	
+	<select id="selectChatRoomUidListBySearch" resultType="String">
+		/* chat.selectChatRoomUidListBySearch */
+		select
+		chat_room_uid
+		from
+		shfda.tb_chat
+		where
+		chat_room_uid in (
+		select chat_room_uid
+		from shfda.tb_chat_room r
+		<where>
+			<include refid="chatRoomConditions"/>
+		</where>
+		)
+		and DBMS_LOB.INSTR(cont_text, #{q}) &gt; 0
+	</select>
+
+	<update id="saveChatRoom">
+		/* chat.saveChatRoom */
+		merge into shfda.tb_chat_room
+		using dual
+		on (chat_room_uid = #{chatRoomUid})
+		when not matched then
+		insert (
+		chat_room_uid,
+		entrance_code,
+		ctg_num,
+		depart_cd,
+		manager_uid,
+		member_uid,
+		cstm_uid,
+		coc_id,
+		coc_nm,
+		auth_type,
+		room_title,
+		cnsr_div_cd,
+		frt_cnsr_div_cd,
+		cstm_os_div_cd,
+		cstm_link_div_cd,
+		chat_room_status_cd,
+		room_mark_num,
+		room_create_dt,
+		<if test="goodCode != null">
+			good_code,
+		</if>
+		<if test="cnsrLinkDt != null">
+			cnsr_link_dt,
+		</if>
+		<if test="lastChatNum != null">
+			last_chat_num,
+			last_chat_cont,
+			last_chat_dt,
+		</if>
+		cstm_reply_delay_yn,
+		sender_div_cd,
+		bot_project_id,
+		bot_session_key,
+		first_bot_intent
+		) values (
+		#{chatRoomUid},
+		#{entranceCode},
+		#{ctgNum},
+		#{departCd},
+		#{managerUid},
+		#{memberUid},
+		#{cstmUid},
+		#{cocId},
+		#{cocNm},
+		#{authType},
+		#{roomTitle},
+		#{cnsrDivCd},
+		#{frtCnsrDivCd},
+		#{cstmOsDivCd},
+		#{cstmLinkDivCd},
+		#{chatRoomStatusCd},
+		#{roomMarkNum},
+		sysdate,
+		<if test="goodCode != null">
+			#{goodCode},
+		</if>
+		<if test="cnsrLinkDt != null">
+			#{cnsrLinkDt},
+		</if>
+		<if test="lastChatNum != null">
+			#{lastChatNum},
+			#{lastChatCont},
+			#{lastChatDt},
+		</if>
+		#{cstmReplyDelayYn},
+		#{senderDivCd},
+		#{botProjectId},
+		#{botSessionKey},
+		#{firstBotIntent}
+		)
+		when matched then
+		update
+		<set>
+			<if test="chatRoomStatusCd != null">
+				chat_room_status_cd = #{chatRoomStatusCd},
+			</if>
+			<if test="memberUid != null">
+				member_uid = #{memberUid},
+			</if>
+			<if test="managerUid != null">
+				manager_uid = #{managerUid},
+			</if>
+			<if test="cnsrDivCd != null">
+				cnsr_div_cd = #{cnsrDivCd},
+			</if>
+			<if test="cnsrLinkDt != null">
+				cnsr_link_dt = #{cnsrLinkDt},
+			</if>
+			<if test="roomMarkNum != null">
+				room_mark_num = #{roomMarkNum},
+			</if>
+			<if test="lastChatNum != null">
+				last_chat_num = #{lastChatNum},
+			</if>
+			<if test="lastChatCont != null">
+				last_chat_cont = #{lastChatCont},
+			</if>
+			<if test="lastChatDt != null">
+				last_chat_dt = #{lastChatDt},
+			</if>
+			<if test="endYn != null">
+				end_yn = #{endYn},
+			</if>
+			<if test="roomEndDt != null">
+				room_end_dt = #{roomEndDt},
+			</if>
+			<if test="endDivCd != null">
+				end_div_cd = #{endDivCd},
+			</if>
+			<if test="cstmReplyDelayYn != null">
+				cstm_reply_delay_yn = #{cstmReplyDelayYn},
+			</if>
+			<if test="senderDivCd != null">
+				sender_div_cd = #{senderDivCd},
+			</if>
+			<if test="ctgNum != null">
+				ctg_num = #{ctgNum},
+			</if>
+			<if test="departCd != null">
+				depart_cd = #{departCd},
+			</if>
+			<if test="cstmDelYn != null">
+				cstm_del_yn = #{cstmDelYn},
+			</if>
+			<if test="botProjectId != null">
+				bot_project_id = #{botProjectId},
+			</if>
+			<if test="botSessionKey != null">
+				bot_session_key = #{botSessionKey},
+			</if>
+			<if test="firstBotIntent != null">
+				first_bot_intent = #{firstBotIntent},
+			</if>
+			<if test="cocId != null">
+				coc_id = #{cocId},
+			</if>
+			<if test="cocNm != null">
+				coc_nm = #{cocNm},
+			</if>
+			<if test="authType != null">
+				auth_type = #{authType},
+			</if>
+			<if test="goodCode != null">
+				good_code = #{goodCode},
+			</if>			
+		</set>
+	</update>
+
+	<!-- 후처리시 분류 정보, 후처리 시각 업데이트 -->
+	<update id="saveChatRoomCtgNum">
+		/* chat.saveChatRoomCtgNum */
+		update shfda.tb_chat_room
+		set
+			ctg_num = #{dep3CtgCd}
+			, end_review_dt = sysdate
+		where chat_room_uid = #{chatRoomUid}
+	</update>
+
+	<update id="updateRoomMark">
+		/* chat.updateRoomMark */
+		update shfda.tb_chat_room
+		set room_mark_num = #{roomMarkNum}
+		where chat_room_uid = #{chatRoomUid}
+	</update>
+
+	<select id="selectChatRoomByScheduler" resultType="CMap">
+		/* chat.selectChatRoomByScheduler */
+		/* 20210429 LKJ 컬럼명 미매칭 오류 수정  (cstm_div_link_cd) */
+		select * from shfda.tb_chat_room
+		where
+			end_yn = 'N'
+			and cstm_link_div_cd = #{channel}
+			<choose>
+				<when test='channel == "B"'>
+			and room_create_dt &lt; trunc(sysdate - 31)	
+				</when>
+				<otherwise>
+				and room_create_dt &lt; trunc(sysdate - 2)
+				</otherwise>
+			</choose>
+			
+	</select>
+
+	<update id="endChatRoomByScheduler">
+		/* chat.endChatRoomByScheduler */
+		update shfda.tb_chat_room
+		set
+			chat_room_status_cd = #{chatRoomStatusCd},
+			end_yn              = #{endYn},
+			end_div_cd          = #{endDivCd},
+			room_end_dt         = trunc(room_create_dt) + 0.99999
+		where
+			end_yn = #{shrEndYn}
+			<if test="shrCnsrDivCd != null">
+				and cnsr_div_cd = #{shrCnsrDivCd}
+			</if>
+			<if test="shrMemeberUid != null">
+				and member_uid = #{shrMemeberUid}
+			</if>
+			<if test='channel != "B"'>
+				and room_create_dt <![CDATA[<]]>= to_date(sysdate - 30)
+			</if>
+	</update>
+
+	<delete id="deleteChatRoom">
+		/* chat.deleteChatRoom */
+		delete
+		from shfda.tb_chat_room
+		where chat_room_uid = #{chatRoomUid}
+	</delete>
+
+	<select id="selectChatCnsrChngReq" resultType="CMap">
+		/* chat.selectChatCnsrChngReq */
+		select *
+		from shfda.tb_chat_cnsr_chng_req
+		<where>
+			<if test="creater != null">
+				and member_uid = #{memberUid}
+			</if>
+			<if test="managerUid != null">
+				and managerUid = #{managerUid}
+			</if>
+			<if test="memberUid != null">
+				and member_uid = #{memberUid}
+			</if>
+			<if test="chngReqNum != null">
+				and chng_req_num = #{chngReqNum}
+			</if>
+			<if test="chatRoomUid != null">
+				and chat_room_uid = #{chatRoomUid}
+			</if>
+			<if test="apprYn != null">
+				and appr_yn = #{apprYn}
+			</if>
+			<if test="reqType != null">
+				and req_type = #{reqType}
+			</if>
+			<if test="todayYn != null">
+				and create_dt &gt;= trunc(sysdate)
+			</if>
+		</where>
+		order by create_dt desc
+	</select>
+
+	<insert id="insertChatCnsrChngReq">
+		/* chat.insertChatCnsrChngReq */
+		insert into shfda.tb_chat_cnsr_chng_req (chng_req_num,
+										   chat_room_uid,
+										   req_type,
+										   manager_uid,
+										   member_uid,
+										   appr_yn,
+										   depart_cd,
+										   change_mem_uid,
+										   creater,
+										   create_dt,
+										   memo,
+										   grade_nm)
+		values (shfda.seq_chng_req_num.nextval,
+				#{chatRoomUid},
+				#{reqType},
+				#{managerUid},
+				#{memberUid},
+				#{apprYn},
+				#{departCd},
+				#{changeMemUid},
+				#{creater},
+				sysdate,
+				#{memo},
+				#{flagName})
+	</insert>
+
+	<update id="updateChatCnsrChngReq">
+		/* chat.updateChatCnsrChngReq */
+		update shfda.tb_chat_cnsr_chng_req
+		set
+		appr_yn = #{apprYn},
+		updater = #{updater},
+		update_dt = sysdate
+		<where>
+			<if test="chngReqNum">
+				and chng_req_num = #{chngReqNum}
+			</if>
+			<if test="chatRoomUid">
+				and chat_room_uid = #{chatRoomUid}
+				and appr_yn = 'N'
+			</if>
+			<if test="reqType">
+				and req_type = #{reqType}
+			</if>			
+		</where>
+	</update>
+
+	<insert id="insertChatCnsrChngHis">
+		/* chat.insertChatCnsrChngHis */
+		insert into shfda.tb_chat_cnsr_chng_his (chng_his_num,
+										   chat_room_uid,
+										   req_type,
+										   manager_uid,
+										   member_uid,
+										   depart_cd,
+										   change_mem_uid,
+										   chng_div_cd,
+										   cnsr_div_cd,
+										   create_dt,
+										   creater)
+		values (shfda.seq_chng_req_num.nextval,
+				#{chatRoomUid},
+				#{reqType},
+				#{managerUid},
+				#{memberUid},
+				#{departCd},
+				#{changeMemUid},
+				#{chngDivCd},
+				#{cnsrDivCd},
+				sysdate,
+				#{creater})
+	</insert>
+
+	<update id="saveCnsEvl">
+		/* chat.saveCnsEvl */
+		merge
+		into shfda.tb_cns_evl
+using dual
+on (chat_room_uid =
+		#{chatRoomUid}
+		)
+
+		when
+		not
+		matched
+		then
+		insert (
+			evl_num,
+			evl_cont,
+			evl_score,
+			chat_room_uid,
+			create_dt,
+			cstm_uid
+		) values (
+	shfda.seq_evl_num.nextval, #{evlCont},
+			#{evlScore},
+			#{chatRoomUid},
+			sysdate,
+			#{cstmUid}
+			)
+	</update>
+	<!-- 후처리시 종료 정보 팝업 전용 -->
+	<select id="selectChatEndInfoPop" resultType="CMap">
+		/* chat.selectChatEndInfoPop */
+		select 
+			CHAT_ROOM_UID
+			, DEP_1_CTG_CD
+			, DEP_2_CTG_CD
+			, DEP_3_CTG_CD
+			, DEP_4_CTG_CD
+			, DEP_1_CTG_NM
+			, DEP_2_CTG_NM
+			, DEP_3_CTG_NM
+			, DEP_4_CTG_NM
+       		, DEP_1_CTG_NUM
+       		, DEP_2_CTG_NUM
+       		, DEP_3_CTG_NUM
+       		, DEP_4_CTG_NUM
+			, MEMO
+			, UPDATER
+			, CNSL_PRHS_ID
+		from shfda.tb_chat_end_info
+		where
+			<if test="chatRoomUid != null">
+				chat_room_uid = #{chatRoomUid}
+			</if>
+
+	</select>
+	<select id="selectChatEndInfo" resultType="CMap">
+		/* chat.selectChatEndInfo */
+		select 
+			a.chat_room_uid,
+
+			case when g.ctg_num is null then 
+				DECODE(h.ctg_mgt_dpt, '2', f.ctg_num, g.ctg_num)
+			else
+				DECODE(h.ctg_mgt_dpt, '2', g.ctg_num, e.ctg_num)
+			end
+			as dep_1_ctg_cd,
+
+			case when g.ctg_num is null then
+				DECODE(h.ctg_mgt_dpt, '2', e.ctg_num, f.ctg_num)
+			else
+				DECODE(h.ctg_mgt_dpt, '2', f.ctg_num, g.ctg_num)
+			end
+			as dep_2_ctg_cd,
+
+			case when g.ctg_num is null then
+				null
+			else
+				DECODE(h.ctg_mgt_dpt, '2', e.ctg_num, f.ctg_num)
+			end
+			as dep_3_ctg_cd,
+
+			b.memo,
+			b.updater,
+			b.DEP_1_CTG_NM,
+			b.DEP_2_CTG_NM,
+			b.DEP_3_CTG_NM 
+			, CNSL_PRHS_ID
+		from
+			shfda.tb_chat_room a
+
+		left outer join shfda.tb_chat_end_info b
+		on a.chat_room_uid = b.chat_room_uid
+
+		left outer join  shfda.tb_ctg_info e
+		on a.ctg_num = e.ctg_num
+
+		left outer join shfda.tb_ctg_info f
+		on e.upper_ctg_num = f.ctg_num
+
+		left outer join shfda.tb_ctg_info g
+		on f.upper_ctg_num = g.ctg_num
+
+		inner join (select ctg_mgt_dpt from shfda.tb_set where 1 = 1 and rownum = 1) h
+		on 1 = 1
+
+		where
+			<if test="chatRoomUid != null">
+				a.chat_room_uid = #{chatRoomUid}
+			</if>
+		order by
+			a.room_create_dt desc
+	</select>
+
+	<update id="saveChatEndInfo">
+		/* chat.saveChatEndInfo */
+		merge into shfda.tb_chat_end_info
+		using dual
+		on (chat_room_uid = #{chatRoomUid})
+
+		when not matched then
+		insert (
+		chat_room_uid,
+		coc_id,
+		link_ip,
+		member_div_cd,
+		login_yn,
+		name,
+		memo,
+		dep_1_ctg_cd,
+		dep_1_ctg_nm,
+		dep_1_ctg_num,
+		dep_2_ctg_cd,
+		dep_2_ctg_nm,
+		dep_2_ctg_num,
+		dep_3_ctg_cd,
+		dep_3_ctg_nm,
+		dep_3_ctg_num,
+		dep_4_ctg_cd,
+		dep_4_ctg_nm,
+		dep_4_ctg_num,
+		CNSL_PRHS_ID,
+		create_dt,
+		creater
+		) values (
+		#{chatRoomUid},
+		#{cocId},
+		#{linkIp},
+		#{memberDivCd},
+		#{loginYn},
+		#{name},
+		#{memo},
+		#{dep1CtgCd},
+		#{dep1CtgNm},
+		#{dep1CtgNum},
+		#{dep2CtgCd},
+		#{dep2CtgNm},
+		#{dep2CtgNum},
+		#{dep3CtgCd},
+		#{dep3CtgNm},
+		#{dep3CtgNum},
+		#{dep4CtgCd},
+		#{dep4CtgNm},
+		#{dep4CtgNum},
+		#{mcaNum},
+		sysdate,
+		#{creater}
+		)
+
+		when matched then
+		update
+		<set>
+			<if test="cocId != null">
+				coc_id = #{cocId},
+			</if>
+			<if test="linkIp != null">
+				link_ip = #{linkIp},
+			</if>
+			<if test="cstmDivCd != null">
+				member_div_cd = #{cstmDivCd},
+			</if>
+			<if test="loginYn != null">
+				login_yn = #{loginYn},
+			</if>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="memo != null">
+				memo = #{memo},
+			</if>
+			<if test="dep1CtgCd != null">
+				dep_1_ctg_cd = #{dep1CtgCd},
+			</if>
+			<if test="dep1CtgNm != null">
+				dep_1_ctg_nm = #{dep1CtgNm},
+			</if>
+			<if test="dep1CtgNum != null">
+				dep_1_ctg_num = #{dep1CtgNum},
+			</if>
+			<if test="dep2CtgCd != null">
+				dep_2_ctg_cd = #{dep2CtgCd},
+			</if>
+			<if test="dep2CtgNm != null">
+				dep_2_ctg_nm = #{dep2CtgNm},
+			</if>
+			<if test="dep2CtgNum != null">
+				dep_2_ctg_num = #{dep2CtgNum},
+			</if>
+			<if test="dep3CtgCd != null">
+				dep_3_ctg_cd = #{dep3CtgCd},
+			</if>
+			<if test="dep3CtgNm != null">
+				dep_3_ctg_nm = #{dep3CtgNm},
+			</if>
+			<if test="dep3CtgNum != null">
+				dep_3_ctg_num = #{dep3CtgNum},
+			</if>
+			<if test="dep4CtgCd != null">
+				dep_4_ctg_cd = #{dep4CtgCd},
+			</if>
+			<if test="dep4CtgNm != null">
+				dep_4_ctg_nm = #{dep4CtgNm},
+			</if>
+			<if test="dep4CtgNum != null">
+				dep_4_ctg_num = #{dep4CtgNum},
+			</if>
+			<if test="updater != null">
+				updater = #{updater},
+			</if>
+			<if test="mcaNum != null">
+				CNSL_PRHS_ID = #{mcaNum},
+			</if>
+			update_dt = sysdate
+		</set>
+	</update>
+
+	<!-- 상담내용 검토 요청 조회 -->
+	<select id="selectChatContReview" resultType="CMap">
+		/* chat.selectChatContReview */
+		select * from shfda.tb_chat_cont_review
+		<where>
+			<if test="reviewReqNum != null">
+				review_req_num = #{reviewReqNum}
+			</if>
+			<if test="chatRoomUid != null">
+				and chat_room_uid = #{chatRoomUid}
+			</if>
+			<if test="compYn != null">
+				and comp_yn = #{compYn}
+			</if>
+		</where>
+	</select>
+
+	<!-- 상담내용 검토 요청 등록 -->
+	<insert id="insertChatContReview">
+		/* chat.insertChatContReview */
+		insert into shfda.tb_chat_cont_review (review_req_num,
+										 chat_room_uid,
+										 manager_uid,
+										 member_uid,
+										 comp_yn,
+										 create_dt,
+										 creater)
+		values (shfda.seq_review_req_num.nextval,
+				#{chatRoomUid},
+				#{managerUid},
+				#{memberUid},
+				#{compYn},
+				sysdate,
+				#{creater})
+	</insert>
+
+	<!-- 상담내용 검토 요청 변경 -->
+	<update id="updateChatContReview">
+		/* chat.updateChatContReview */
+		update shfda.tb_chat_cont_review
+		set comp_yn   = #{compYn},
+			update_dt = sysdate,
+			updater   = #{updater}
+		where review_req_num = #{reviewReqNum}
+	</update>
+
+	<!-- 챗봇과 대화 채팅방 -->
+	<select id="selectChatRoomWithBot" resultType="CMap">
+		/* chat.selectChatRoomWithBot */
+		select
+		a.*
+		, b.coc_id
+		, b.cstm_div_cd
+		, d.name
+		, c.cd_nm
+		from shfda.tb_chat_room a
+
+		inner join shfda.tb_chat_cstm_info b
+		on a.cstm_uid = b.cstm_uid
+
+		inner join (select * from shfda.tb_cd where cd_group = 'CSTM_DIV_CD') c
+		on b.cstm_div_cd = c.cd
+
+		inner join shfda.tb_temp_member_info d
+		on b.coc_id = d.id
+		where
+		a.frt_cnsr_div_cd = 'R'
+		and
+		a.room_create_dt &gt;= trunc(to_date(#{startDate}, 'yyyy-mm-dd'))
+		and
+		a.room_create_dt &lt; trunc(to_date(#{endDate}, 'yyyy-mm-dd')+1)
+		<if test="id != ''.toString()">
+			and b.coc_id = #{id}
+		</if>
+		<if test="div == '1'.toString()">
+			and b.coc_id like '099%'
+		</if>
+		<if test="div == '2'.toString()">
+			and b.coc_id not like '099%'
+		</if>
+		<if test="name != ''.toString()">
+			and d.name = #{name}
+		</if>
+
+		order by a.room_create_dt desc
+	</select>
+
+	<!-- '챗봇과 대화 채팅방'의 대화 이력 -->
+	<select id="selectChatWithBot" resultMap="clobCMap">
+		/* chat.selectChatWithBot */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select
+		a.chat_num
+		,a.chat_room_uid
+		,a.cnsr_member_uid
+		,a.sender_div_cd
+		,a.sender_uid
+		,a.avatar_cd
+		,a.cont_div_cd
+		,A.CONT
+		,A.CONT_TEXT
+		,a.msg_status_cd
+		,to_char(a.reg_dt,'yyyy-mm-dd hh24:mi:ss') as reg_dt
+		,a.bot_category_1
+		,a.bot_category_2
+		,a.bot_category_3
+		,a.bot_intent
+		,a.evl_type_cd
+		from shfda.tb_chat a
+
+		inner join shfda.tb_chat_room b
+		on a.chat_room_uid = b.chat_room_uid
+
+		where
+		b.chat_room_uid in
+		<foreach collection="chatRoomUidList" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+
+		order by b.room_create_dt desc, a.chat_num
+	</select>
+
+	<!-- '챗봇과 대화 채팅방'의 대화 이력 (엑셀용) -->
+	<select id="selectChatWithBotForExcel" resultMap="clobCMap">
+		/* chat.selectChatWithBotForExcel */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select to_char(a.reg_dt, 'yyyy-mm-dd hh24:mi:ss') as reg_dt
+			 , b.bot_intent
+			 , b.evl_type_cd
+			 , A.CONT_TEXT
+			 , B.CONT
+
+		from shfda.tb_chat a
+
+				 inner join shfda.tb_chat b
+							on a.chat_num = b.rel_chat_num
+
+		where a.chat_room_uid in (
+			select chat_room_uid
+			from shfda.tb_chat_room
+			where frt_cnsr_div_cd = 'R'
+			  and room_create_dt &gt;= trunc(to_date(#{startDate}, 'yyyy-mm-dd'))
+			  and room_create_dt &lt; trunc(to_date(#{endDate}, 'yyyy-mm-dd') + 1)
+		)
+
+		order by a.chat_num
+	</select>
+
+	<!-- 챗봇과 대화 이력 2 -->
+	<select id="selectChatWithBot2" resultMap="clobCMap">
+		/* chat.selectChatWithBot2 */
+		/* 20210429 LKJ CLOB TYPE SELECT 처리 변경 */
+		select a.chat_room_uid
+		, to_char(a.room_create_dt, 'yyyy-mm-dd hh24:mi:ss') as room_create_dt
+		, nvl(c.id, b.coc_id) as coc_id
+		, nvl(c.name, b.name) as name
+		, nvl(c.cstm_div_cd, b.cstm_div_cd) as cstm_div_cd
+		, shfda.fn_GETCODENM('CSTM_DIV_CD', nvl(c.cstm_div_cd, b.cstm_div_cd)) as cstm_div_nm
+		, shfda.fn_GETCODENM('CSTM_OS_DIV_CD', a.cstm_os_div_cd) as cstm_os_div_nm
+		, a.cstm_os_div_cd
+		, e.bot_intent as bot_intent
+		, D.CONT_TEXT AS QUESTION
+		, E.CONT AS ANSWER
+		, nvl(e.evl_type_cd, 'NONE') as evl_type_cd
+		, decode(e.evl_type_cd, 'UP', '정확해요', 'SOSO', '애매해요', 'DOWN', '틀렸어요', '') as evl_type_nm
+		, to_char(d.reg_dt, 'yyyy-mm-dd hh24:mi:ss') as q_reg_dt
+		, to_char(e.reg_dt, 'yyyy-mm-dd hh24:mi:ss') as a_reg_dt
+		, d.chat_num as q_chat_num
+		, e.chat_num as a_chat_num
+		, rank() over(partition by a.chat_room_uid order by d.chat_num) as rk
+		, count(*) over() as all_cnt
+		, count(case when e.evl_type_cd = 'UP' then 1 end) over() as up_cnt
+		, count(case when e.evl_type_cd = 'SOSO' then 1 end) over() as soso_cnt
+		, count(case when e.evl_type_cd = 'DOWN' then 1 end) over() as down_cnt
+		, count(case when e.evl_type_cd is null or (e.evl_type_cd != 'UP' and e.evl_type_cd != 'SOSO' and e.evl_type_cd
+		!= 'DOWN') then 1 end) over() as none_cnt
+		, count(case when a.cstm_os_div_cd = 'WEB' then 1 end) over() as web_cnt
+		, count(case when a.cstm_os_div_cd = 'ANDROID' then 1 end) over() as android_cnt
+		, count(case when a.cstm_os_div_cd = 'IPHONE' then 1 end) over() as iphone_cnt
+		, count(case when a.cstm_os_div_cd is null or (a.cstm_os_div_cd != 'WEB' and a.cstm_os_div_cd != 'ANDROID' and
+		a.cstm_os_div_cd != 'IPHONE') then 1 end) over() as os_none_cnt
+		from shfda.tb_chat_room a
+		inner join shfda.tb_chat_cstm_info b on (a.cstm_uid = b.cstm_uid)
+		left outer join shfda.tb_temp_member_info c on (b.coc_id = c.id)
+		inner join shfda.tb_chat d on (a.chat_room_uid = d.chat_room_uid)
+		left outer join shfda.tb_chat e on (d.chat_num = e.rel_chat_num)
+		where a.room_create_dt between to_date(#{startDate}, 'yyyy-mm-dd') and to_date(#{endDate}, 'yyyy-mm-dd') +
+		0.99999
+		and d.sender_div_cd = 'U'
+
+		<if test="typeMEMBER != null and typeMEMBER == 'Y'.toString() and (typeFP == null or typeFP == 'N'.toString())">
+			and c.cstm_div_cd = 'MEMBER'
+		</if>
+		<if test="typeFP != null and typeFP == 'Y'.toString() and (typeMEMBER == null or typeMEMBER == 'N'.toString())">
+			and c.cstm_div_cd = 'FP'
+		</if>
+
+		<if test="intentDefault != null and intentDefault == 'Y'.toString() and (intentOther == null or intentOther == 'N'.toString())">
+			and e.bot_intent = 'Default_Fallback_Intent'
+		</if>
+		<if test="intentOther != null and intentOther == 'Y'.toString() and (intentDefault == null or intentDefault == 'N'.toString())">
+			and e.bot_intent != 'Default_Fallback_Intent'
+		</if>
+
+		<if test="schMmemberId != null and schMmemberId != ''.toString()">
+			and b.coc_id = #{schMmemberId}
+		</if>
+
+		<if test="schName != null and schName != ''.toString()">
+			and (c.name like '%'||#{schName}||'%' or b.name like '%'||#{schName}||'%')
+		</if>
+
+		<choose>
+			<when test="schEvlTypeCd != null and schEvlTypeCd == 'UP'.toString()">
+				and e.evl_type_cd = 'UP'
+			</when>
+			<when test="schEvlTypeCd != null and schEvlTypeCd == 'SOSO'.toString()">
+				and e.evl_type_cd = 'SOSO'
+			</when>
+			<when test="schEvlTypeCd != null and schEvlTypeCd == 'DOWN'.toString()">
+				and e.evl_type_cd = 'DOWN'
+			</when>
+			<when test="schEvlTypeCd != null and schEvlTypeCd == 'NONE'.toString()">
+				and (e.evl_type_cd is null or e.evl_type_cd == '')
+			</when>
+		</choose>
+
+		order by a.room_create_dt desc, d.chat_num asc
+	</select>
+
+	<!-- TODO: DELETEME, 임시오픈시만 사용
+		챗봇 답변 평가 버튼 -->
+	<update id="evlChatMessage">
+		/* chat.evlChatMessage */
+		update shfda.tb_chat
+		set evl_type_cd = #{evl}
+		where chat_num = #{chatNum}
+	</update>
+</mapper>

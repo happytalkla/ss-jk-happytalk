@@ -1,0 +1,33 @@
+@charset "utf-8";
+
+/*
+  2020 삼성증권 챗봇서비스 리뉴얼
+  common css Style
+  Author : 유희정
+  Version : 1.0
+*/
+
+/* 스킵네비 */
+.skip-navi{display: block; width: 0; height: 0; text-indent:-9999px; overflow:hidden}
+.skip-navi > a{font-size: 0; line-height:0;}
+
+/* 레이아웃 */
+.chat-area{background-color:#eef5fb; position:relative; height:100%; /* min-width:360px */}
+.chat-top{background-color:#fff; height:60px; position: absolute; top: 0; z-index: 99; width: 100%; }
+.chat-bottom{background-color:#fff; /* height:57px; */ position:absolute; left:0; bottom:0; width:100%}
+
+/* chat-body height */
+.chat-body{height: calc(100% - 117px); overflow-y:scroll;} /*height: calc(100% - 144px); */
+.left-chat-wrap:last-child{padding-bottom:30px} /* chat-body 하단 간격 - 임의 */
+.right-chat-wrap:last-child{padding-bottom:30px} 
+.no-bottom .chat-body{height: calc(100% - 64px)}
+
+/* placeholder */
+input::-webkit-input-placeholder{color:#e3e3e3; font-size:14px}
+input:-ms-input-placeholder{color:#e3e3e3; font-size:14px} /* outline:none; border:none;  */
+input:-moz-placeholder{color:#e3e3e3; font-size:14px}
+input::-moz-placeholder{color:#e3e3e3; font-size:14px}
+
+
+
+

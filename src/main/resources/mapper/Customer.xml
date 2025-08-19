@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="customer">
+		
+	<select id="selectCustomerSinfo" resultType="CMap">
+		select 
+			*
+		from (
+			select 
+				CUST_NO
+				, CUST_NM
+				, CUST_AGE || ' ('  || CUST_GNDR || ')' as cust_age
+				, MB_TLNO
+				, shfda.fn_GETCODENM('OWN_VEHICLE', VHCL_OWN_CD) as VHCL_OWN_CD
+				, RMN_PNT
+				, ADTN_LON_DVNM
+				, AUTO_YN
+				, LON_PSBL_AMT
+				, UNI_GRD_CD
+				, SP_GRD_VL
+				, SNMN_BANK_YN
+				, CRD_AGRM_YN
+				, LON_RCV_NO
+				, RCV_PATH_NM
+				, LON_DVCD
+				, CUST_YN
+				, LON_RQUS_GDS_NM
+				, RCV_DT
+				, RCV_STS_NM
+				, PIC_EMNO_NM
+			from shfda.tb_mapping_cust_info
+			where  use_yn = 'Y'
+			and room_id = #{chatRoomUid}
+			order by to_date(RCV_DT, 'yyyymmdd') desc
+		) t1
+		where rownum = 1
+	</select>
+	
+	
+	<select id="selectCallHistList" resultType="CMap">
+		/* customer.selectCallHistList */
+		select 
+			*
+		  from shfda.tb_mapping_call_hist a
+		 where room_id = #{chatRoomUid}
+		 	
+		 order by seq desc
+	</select>
+	
+		<select id="selectCustInfoList" resultType="CMap">
+		/* customer.selectCustInfoList */
+		select 
+			shfda.fn_GETCODENM('OWN_VEHICLE', a.VHCL_OWN_CD) as VHCL_OWN_CD
+			, shfda.fn_GETCODENM('LOAN_TYPE', LON_DVCD) as LON_DVCD
+			, shfda.fn_GETCODENM('REPAYMENT_METHOD', RFND_METD_DVCD) as RFND_METD_DVCD
+			, a.*
+		from shfda.tb_mapping_cust_info a
+		where room_id = #{chatRoomUid} and use_yn = 'Y'
+		/* and LON_NO is not null */
+		order by seq desc
+	</select>
+
+</mapper>

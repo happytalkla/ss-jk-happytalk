@@ -1,0 +1,22 @@
+version: '3.1'
+services:
+  rabbitmq:
+    hostname: rabbitmq
+    container_name: rabbitmq
+    image: ht/rabbitmq-stomp:1.0
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 61613:61613
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    extra_hosts:
+      - 'rabbit:127.0.0.1'
+    networks:
+      - donet
+
+networks:
+  donet:
+    driver: bridge
+

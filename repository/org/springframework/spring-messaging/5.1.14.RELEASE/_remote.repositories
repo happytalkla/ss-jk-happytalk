@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Mar 10 15:45:23 KST 2022
+spring-messaging-5.1.14.RELEASE-sources.jar>central=
+spring-messaging-5.1.14.RELEASE.jar>central=
+spring-messaging-5.1.14.RELEASE.pom>central=

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotSkill">
+
+	<select id="select" resultType="BotSkill">
+		/* BotSkill.select */
+		select *
+		from shfda.tb_bot_skill
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="authKey != null">
+			and auth_key = #{authKey}
+			</if>
+			<if test="modified != null">
+			and modified = #{modified}
+			</if>
+			<if test="modifier != null">
+			and modifier = #{modifier}
+			</if>
+			<if test="name != null">
+			and name = #{name}
+			</if>
+			<if test="namespace != null">
+			and namespace = #{namespace}
+			</if>
+			<if test="resources != null">
+			and resources = #{resources}
+			</if>
+			<if test="scope != null">
+			and scope = #{scope}
+			</if>
+			<if test="type != null">
+			and type = #{type}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+	
+	<select id="selectId" resultType="Long">
+	select shfda.seq_bot_skill.nextval from dual
+	</select>
+	
+	<update id="save">
+		/* shfda.tb_bot_skill.save */
+		merge into shfda.tb_bot_skill
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+			id
+			,auth_key
+			,modified
+			,modifier
+			,name
+			,namespace
+			,resources
+			,scope
+			,sort
+			,type
+			,use_yn
+		)
+		values
+		(
+			 #{id}
+			, #{authKey}
+			, sysdate
+			, 1
+			, #{name}
+			, #{namespace}
+			, #{resources}
+			, #{scope}
+			, #{sort}
+			, #{type}			
+			, #{useYn}
+		)
+
+		when matched then
+		update
+		set
+		    auth_key  = #{authKey}
+		    ,modified  = sysdate
+		    ,modifier  = 1
+		    ,name      = #{name}
+		    ,namespace = #{namespace}
+		    ,resources = #{resources}
+		    ,scope     = #{scope}
+		    ,sort      = #{sort}
+		    ,type      = #{type}
+		    ,use_yn    = #{useYn}
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* shfda.tb_bot_skill.delete */
+		delete from shfda.tb_bot_skill
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

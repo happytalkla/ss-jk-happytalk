@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Apr 13 11:05:16 KST 2023
+common-image-3.5-sources.jar>central=
+common-image-3.5.jar>central=
+common-image-3.5.pom>central=

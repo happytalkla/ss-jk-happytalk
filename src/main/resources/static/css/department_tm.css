@@ -1,0 +1,58 @@
+.tm_disabled textarea{
+
+	pointer-events:none;
+	background-color:#eee;
+	opacity:0.5;
+}
+.tm_disabled input{
+	pointer-events:none;
+	cursor: not-allowed;
+	background-color:#eee;
+	opacity:0;
+}
+.tm_disabled input + label{
+	pointer-events:none;
+	cursor: not-allowed;
+	opacity:0.5;
+}
+.tm_disabled label{
+	pointer-events:none;
+	cursor: not-allowed;
+	opacity:0.5;
+}
+.tm_disabled > a{
+	cursor: not-allowed;
+	pointer-events:none;
+	background-color:#eee;
+	opacity:0.5;
+}
+.tm_disabled button{
+	pointer-events:none;
+	background-color:#eee;
+	opacity:0.5;
+}
+.tm_disabled select{
+
+	pointer-events:none;
+	background-color:#eee;
+	opacity:0.5;
+}
+
+.tm_disabled .switch.w90 .switch-input:checked ~ .switch-label {
+	pointer-events:none;
+	cursor: not-allowed;
+	background-color:#eee;
+	opacity:0.5;
+}
+.tm_disabled .switch.w70 .switch-input:checked ~ .switch-label {
+  	pointer-events:none;
+	cursor: not-allowed;
+	background-color:#eee;
+	opacity:0.5;
+}
+.tm_disabled i{
+	opacity:0.5;
+}
+.tm_disp_none{
+	display:none;	
+}

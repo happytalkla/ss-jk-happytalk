@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotSkillConditionProperty">
+
+	<select id="select" resultType="BotSkillConditionProperty">
+		/* BotSkillConditionProperty.select */
+		select *
+		from shfda.tb_bot_skill_condition_property
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="conditionId != null">
+			and condition_id = #{conditionId}
+			</if>
+			<if test="expect != null">
+			and expect = #{expect}
+			</if>
+			<if test="modified != null">
+			and modified = #{modified}
+			</if>
+			<if test="modifier != null">
+			and modifier = #{modifier}
+			</if>
+			<if test="name != null">
+			and name = #{name}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+
+	<update id="save">
+		/* BotSkillConditionProperty.save */
+		merge into shfda.tb_bot_skill_condition_property
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+			id
+			,condition_id
+			,expect
+			,modified
+			,modifier
+			,name
+			,sort
+			,use_yn
+			,description
+		)
+		values
+		(
+			 shfda.seq_bot_skill_condition_property.nextval
+			, #{conditionId}
+			, #{expect}
+			, sysdate
+			, 1
+			, #{name}
+			, #{sort}
+			, #{useYn}
+			, #{description}
+		)
+
+		when matched then
+		update
+		set
+		     condition_id       = #{conditionId}        
+		    ,expect             = #{expect}             
+		    ,modified           = sysdate
+		    ,modifier           = 1
+		    ,name               = #{name}               
+		    ,sort               = #{sort}               
+		    ,use_yn             = #{useYn}             
+		    ,description		= #{description} 
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* BotSkillConditionProperty.delete */
+		delete from shfda.tb_bot_skill_condition_property
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

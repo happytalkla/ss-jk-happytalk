@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotBlockDeploy">
+
+	<select id="select" resultType="BotBlockDeploy">
+		/* BotBlockDeploy.select */
+		select *
+		from shfda.tb_bot_block_deploy
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="autoBlockId != null">
+			and auto_block_id = #{autoBlockId}
+			</if>
+			<if test="autoCallApiUrl">
+			and auto_call_api_url = #{autoCallApiUrl}
+			</if>
+			<if test="cont != null">
+			and cont = #{cont}
+			</if>
+			<if test="defaultActionsUseYn != null">
+			and default_actions_use_yn = #{defaultActionsUseYn}
+			</if>
+			<if test="defaultConditionBlockId != null">
+			and default_condition_block_id = #{defaultConditionBlockId}
+			</if>			
+			<if test="deletableYn != null">
+			and deletable_yn = #{deletableYn}
+			</if>
+			<if test="endCategoryId != null">
+			and end_category_id = #{endCategoryId}
+			</if>
+			<if test="fallbackBlockId != null">
+			and fallback_block_id = #{fallbackBlockId}
+			</if>
+			<if test="intent != null">
+			and intent = #{intent}
+			</if>					
+			<if test="name != null">
+			and name = #{name}
+			</if>
+			<if test="scenarioId != null">
+			and scenario_id = #{scenarioId}
+			</if>
+			<if test="skillDisplayType != null">
+			and skill_display_type = #{skillDisplayType}
+			</if>
+			<if test="skillId != null">
+			and skill_id = #{skillId}
+			</if>	
+			<if test="triggerCode != null">
+			and trigger_code = #{triggerCode}
+			</if>
+			<if test="type != null">
+			and type = #{type}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>				
+			<if test="orient != null">
+			and orient = #{orient}
+			</if>								
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+	
+	<insert id="insert">
+	/* BotBlockDeploy.insert */
+	insert into shfda.tb_bot_block_deploy
+		(
+		    id,
+		    auto_block_id,
+		    auto_call_api_url,
+		    cont,
+		    default_actions_use_yn,
+		    default_condition_block_id,
+		    deletable_yn,
+		    deployed,
+		    deployer,
+		    end_category_id,
+		    fallback_block_id,
+		    intent,
+		    modified,
+		    modifier,
+		    name,
+		    scenario_id,
+		    skill_display_type,
+		    skill_id,
+		    trigger_code,
+		    type,
+		    use_yn,
+		    orient
+		)
+		values
+		(
+			  #{id}
+			, #{autoBlockId}
+			, #{autoCallApiUrl}
+			, #{cont}
+			, #{defaultActionsUseYn}
+			, #{defaultConditionBlockId}
+			, #{deletableYn}
+			, sysdate
+			, 1
+			, #{endCategoryId}
+			, #{fallbackBlockId}
+			, #{intent}
+			, sysdate
+			, 1
+			, #{name}
+			, #{scenarioId}
+			, #{skillDisplayType}
+			, #{skillId}
+			, #{triggerCode}
+			, #{type}		
+			, #{useYn}
+			, #{orient}
+		)
+	</insert>
+
+	<update id="save">
+		/* BotBlockDeploy.save */
+		merge into shfda.tb_bot_block_deploy
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+		    id,
+		    auto_block_id,
+		    auto_call_api_url,
+		    cont,
+		    default_actions_use_yn,
+		    default_condition_block_id,
+		    deletable_yn,
+		    deployed,
+		    deployer,
+		    end_category_id,
+		    fallback_block_id,
+		    intent,
+		    modified,
+		    modifier,
+		    name,
+		    scenario_id,
+		    skill_display_type,
+		    skill_id,
+		    trigger_code,
+		    type,
+		    use_yn,
+		    orient
+		)
+		values
+		(
+			 #{id}
+			, #{autoBlockId}
+			, #{autoCallApiUrl}
+			, #{cont}
+			, #{defaultActionsUseYn}
+			, #{defaultConditionBlockId}
+			, #{deletableYn}
+			, sysdate
+			, 1
+			, #{endCategoryId}
+			, #{fallbackBlockId}
+			, #{intent}
+			, sysdate
+			, 1
+			, #{name}
+			, #{scenarioId}
+			, #{skillDisplayType}
+			, #{skillId}
+			, #{triggerCode}
+			, #{type}		
+			, #{useYn}
+			, #{orient}
+		)
+
+		when matched then
+		update
+		set
+		    auto_block_id = #{autoBlockId},
+		    auto_call_api_url = #{autoCallApiUrl},
+		    cont = #{cont},
+		    default_actions_use_yn = #{defaultActionsUseYn},
+		    default_condition_block_id = #{defaultConditionBlockId},
+		    deletable_yn = #{deletableYn},
+		    deployed = sysdate,
+		    deployer = 1,
+		    end_category_id = #{endCategoryId} ,
+		    fallback_block_id = #{fallbackBlockId},
+		    
+		    modified = sysdate,
+		    modifier = 1,
+		    skill_display_type = #{skillDisplayType},
+		    skill_id = #{skillId},
+		    trigger_code = #{triggerCode},
+		    type = #{type},
+		    use_yn = #{useYn},
+			scenario_id = #{scenarioId},
+			name = #{name},
+			orient = #{orient}
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* BotBlockDeploy.delete */
+		delete from shfda.tb_bot_block_deploy
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

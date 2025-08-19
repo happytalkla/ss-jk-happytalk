@@ -1,0 +1,3 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%><%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<option>${depthnm}분류 선택</option>
+<c:forEach items="${categoryList}" var="category"><option value="<c:out value="${category.ctg_num}" />" data-ctg-num="<c:out value="${category.ctg_num}" />"  data-ctg-nm="<c:out value="${category.ctg_nm}" />"><c:out value="${category.ctg_nm}" /></option></c:forEach>

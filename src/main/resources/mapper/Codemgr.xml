@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="codemgr">
+
+	<!-- 용어사전 목록 조회 -->
+	<select id="selectCodeList" resultType="CMap">
+		/* codemgr.selectCodeList */
+		select *
+		from
+		shfda.tb_cd
+		where cd_group = 'DEPART_CD'
+			<if test='cdNm != null and cdNm != ""'>
+				and cd_nm like '%' || #{cdNm} || '%'
+			</if>
+			<if test="cdDesc != null and cdDesc != ''">
+				and cd_desc like '%' || #{cdDesc} || '%'
+			</if>
+			<if test="code != null and code != ''">
+				and cd like '%' || #{code} || '%'
+			</if>
+		order by cd asc
+	</select>
+
+
+	<!--  용어사전 상세 조회 -->
+	<select id="selectCodeDetail" resultType="CMap">
+		/* codemgr.selectCodeDetail */
+		select
+			*
+		from
+		shfda.tb_cd
+		where cd_group = 'DEPART_CD' and cd = #{cd}
+	</select>
+
+	<update id="deleteCode">
+		/* codemgr.deleteCode */
+		delete from shfda.tb_cd
+		where cd_group = 'DEPART_CD' and cd = #{cd}
+	</update>
+
+	<insert id="insertCode">
+		/* codemgr.insertCode */
+		insert into shfda.tb_cd
+		(
+			CD_GROUP
+			, CD
+			, CD_NM
+			, SIM_NM
+			, CD_DESC
+			, SEQ
+			, USE_YN
+			, CREATE_DT
+		)
+		values
+		(
+			'DEPART_CD'
+			, #{code}
+			, #{cdNm}
+			, #{cdNm}
+			, #{cdDesc}
+			, #{seq}
+			, 'Y'
+			, sysdate
+		)
+	</insert>
+
+	<update id="updateCode">
+		/* codemgr.updateCode */
+		update shfda.tb_cd
+		set cd_nm		= #{cdNm}
+		  , cd_desc		= #{cdDesc}
+		  , SIM_NM		= #{cdNm}
+		  , SEQ			= #{seq}
+		where cd_group = 'DEPART_CD' and cd = #{code}
+	</update>
+</mapper>

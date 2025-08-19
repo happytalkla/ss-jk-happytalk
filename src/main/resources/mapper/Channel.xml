@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="channel">
+
+	<sql id="channelRoomConditions">
+		<if test="cstmLinkDivCd != null">
+			and cstm_link_div_cd = #{cstmLinkDivCd}
+		</if>
+		<if test="cstmLinkServiceUid != null">
+			and cstm_link_service_uid = #{cstmLinkServiceUid}
+		</if>
+		<if test="cstmLinkCustomerUid != null">
+			and cstm_link_customer_uid = #{cstmLinkCustomerUid}
+		</if>
+		<if test="chatRoomUid != null">
+			and chat_room_uid = #{chatRoomUid}
+		</if>
+	</sql>
+
+	<select id="selectChannelRoom" resultType="ChannelRoom">
+		/* channel.selectChannelRoom */
+		select *
+		from shfda.tb_channel_room
+		<where>
+			<include refid="channelRoomConditions"/>
+		</where>
+	</select>
+
+	<insert id="insertChannelRoom" parameterType="ChannelRoom">
+		/* channel.insertChannelRoom */
+		insert into shfda.tb_channel_room (
+			cstm_link_div_cd,
+			cstm_link_service_uid,
+			cstm_link_customer_uid,
+			open_params,
+			chat_room_uid,
+			update_dt
+		)
+		values (
+			#{cstmLinkDivCd},
+			#{cstmLinkServiceUid},
+			#{cstmLinkCustomerUid},
+			#{openParams},
+			#{chatRoomUid},
+			sysdate
+		)
+	</insert>
+
+	<update id="updateChannelRoom" parameterType="ChannelRoom">
+		/* channel.updateChannelRoom */
+		update shfda.tb_channel_room
+		<set>
+			<if test="chatRoomUid != null">
+				chat_room_uid = #{chatRoomUid},
+			</if>
+			<if test="openParams != null">
+				open_params = #{openParams},
+			</if>
+		    update_dt = sysdate
+		</set>
+		<where>
+			<include refid="channelRoomConditions"/>
+		</where>
+	</update>
+
+	<delete id="deleteChannelRoom" parameterType="ChannelRoom">
+		/* channel.deleteChannelRoom */
+		delete from shfda.tb_channel_room
+		where
+			<include refid="channelRoomConditions"/>
+	</delete>
+</mapper>

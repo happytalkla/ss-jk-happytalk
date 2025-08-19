@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="certification">
+
+	<delete id="deleteCertification">
+		/* certification.deleteCertification */
+		delete shfda.tb_certification
+		where channel = #{channel} AND uuid = #{uuid}
+	</delete>
+
+	<update id="resetCertificationRoomInfo">
+		/* certification.resetCertificationRoomInfo */
+		UPDATE shfda.tb_chat_room
+		SET
+			auth_type = '', auth_position = ''
+		WHERE
+			chat_room_uid = #{chatRoomUid}
+	</update>
+
+	<delete id="deleteCertificationRoomUid">
+		/* certification.deleteCertificationRoomUid */
+		DELETE
+		FROM shfda.tb_certification
+		WHERE 
+			channel IN (
+				SELECT
+					TCCI.CSTM_LINK_DIV_CD
+				FROM
+					shfda.tb_CHAT_ROOM TCR
+					LEFT JOIN shfda.tb_CHAT_CSTM_INFO TCCI ON TCR.CSTM_UID = TCCI.CSTM_UID
+				WHERE
+					TCR.CHAT_ROOM_UID = #{chatRoomUid}
+			)
+			AND uuid IN (
+				SELECT
+					TCCI.CSTM_LINK_CUSTOMER_UID
+				FROM
+					shfda.tb_CHAT_ROOM TCR
+					LEFT JOIN shfda.tb_CHAT_CSTM_INFO TCCI ON TCR.CSTM_UID = TCCI.CSTM_UID
+				WHERE
+					TCR.CHAT_ROOM_UID = #{chatRoomUid}
+			)
+	</delete>
+
+	<insert id="insertCertification">
+		/* certification.insertCertification */
+		insert into shfda.tb_certification
+		(
+			uuid
+			, channel
+			, extra_data
+			, expire_date 
+			, auth_type 
+			<if test="auth_position != null and auth_position != ''.toString()">
+			, auth_position
+			</if>
+		)
+		values
+		(
+			#{uuid}
+			, #{channel}
+			, #{extra_data}
+			, to_date( #{expire_date} , 'YYYY MM DD hh24.mi:ss')
+			, #{auth_type}
+			<if test="auth_position != null and auth_position != ''.toString()">
+			, #{auth_position}
+			</if>
+		)
+	</insert>
+	
+	<update id="updateExpireTimeCertification">
+		/* certification.updateExpireTimeCertification */
+		update shfda.tb_certification
+		set
+			expire_date = to_date( #{expire_date} , 'YYYY MM DD hh24.mi:ss')
+		where 
+			channel = #{channel} 
+			and uuid = #{uuid}
+	</update>
+	
+	<select id="selectCertification" resultType="cMap">
+		/* certification.selectCertification */
+		select 
+			uuid
+			, channel
+			, extra_data
+			, auth_type
+			, auth_position
+		from 
+			shfda.tb_certification
+		where
+			channel = #{channel}
+			and uuid = #{uuid}
+			<if test="expire_date != null">
+			and expire_date &gt; to_date( #{expire_date} , 'YYYY MM DD hh24.mi:ss')
+			</if>
+	</select>
+	
+	<select id="selectCertificationNoUseExpireDate" resultType="cMap">
+		/* certification.selectCertificationNoUseExpireDate */
+		select 
+			uuid
+			, channel
+			, extra_data
+			, auth_type
+			, auth_position
+		from 
+			shfda.tb_certification
+		where
+			channel = #{channel}
+			and uuid = #{uuid}
+	</select>
+	
+	<select id="selectCertificationChecked" resultType="cMap">
+		/* certification.selectCertificationChecked */
+		select 
+			count(*) AS is_certification
+		from 
+			shfda.tb_certification
+		where
+			channel = #{channel}
+			and uuid = #{uuid}
+	</select>
+	
+	<select id="selectCertificationChecked1Hour" resultType="cMap">
+		/* certification.selectCertificationChecked1Hour */
+		select 
+			count(*) AS is_certification
+		from 
+			shfda.tb_certification
+		where
+			channel = #{channel}
+			and uuid = #{uuid}
+			and expire_date &gt; to_date( to_char( SYSDATE-1/24 , 'YYYY MM DD hh24.mi:ss') , 'YYYY MM DD hh24.mi:ss')
+	</select>
+	
+	<insert id="insertCertificationCode">
+		/* certification.insertCertificationCode */
+		insert into shfda.tb_certification_code
+		(
+			uuid
+			, channel
+			, code
+			, regdt 
+			, unique_cd
+		)
+		values
+		(
+			#{uuid}
+			, #{channel}
+			, #{code}
+			, to_date( #{expire_date} , 'YYYY MM DD hh24.mi:ss')
+			, #{unique_cd}
+		)
+	</insert>
+
+	<select id="selectCertificationCode" resultType="cMap">
+		/* certification.selectCertificationCode */
+		SELECT * 
+		FROM (
+			select 
+				uuid
+				, channel
+				, code
+				, regdt
+				, unique_cd
+				, rownum AS rnum
+			from 
+				shfda.tb_certification_code
+			where
+				channel = #{channel}
+				and uuid = #{uuid}
+				and regdt &gt; to_date( #{expire_date} , 'YYYY MM DD hh24.mi:ss')
+				and auth_cd is null
+			order by regdt desc
+		)
+		WHERE rnum = 1
+	</select>
+
+	<update id="updateCertificationCode">
+		/* certification.updateCertificationCode */
+		update shfda.tb_certification_code
+		set
+			auth_cd = #{auth_cd}
+		where 
+			unique_cd = #{unique_cd} 
+	</update>
+</mapper>

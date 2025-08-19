@@ -1,0 +1,201 @@
+﻿@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 100;src: url(/happytalk/fonts/NotoSansKR-Thin.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Thin.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Thin.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Thin.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 300;src: url(/happytalk/fonts/NotoSansKR-Light.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Light.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Light.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Light.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 400;src: url(/happytalk/fonts/NotoSansKR-Regular.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Regular.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Regular.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Regular.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 500;src: url(/happytalk/fonts/NotoSansKR-Medium.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Medium.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Medium.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Medium.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 700;src: url(/happytalk/fonts/NotoSansKR-Bold.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Bold.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Bold.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Bold.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 900;src: url(/happytalk/fonts/NotoSansKR-Black.ttf) format('truetype'),url(/happytalk/fonts/NotoSansKR-Black.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Black.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Black.otf) format('opentype');}
+/*페이지 공통 CSS 시작*/
+body{
+	margin: 0;
+	padding: 0;
+	font-family: 'Noto Sans CJK KR';
+	background-color: #ffffff;
+	font-weight: 400;
+	min-width: 787px;
+}
+
+p{
+	padding: 0;
+	margin: 0 0 0 15px;
+	text-indent: -1em;
+	text-align: left;
+}
+a{
+	color:#0087d4;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+ul{
+	list-style: none;
+}
+button:focus,
+button:active{
+	outline:none;
+}
+/*.divTableRow {margin: 10px 0px;}*/
+div{padding: 0;margin: 0;}
+.login-wrapper input[type="text"],.login-wrapper input[type="password"]{
+	height:43px;
+	width:378px;
+	color:#222;
+    border-color: #a5a5a5;
+	background-color: #ffffff;
+	border:1px solid #c2bfc8;
+	border-radius: 4px;
+	margin: 0;
+	padding-left:15px;
+}
+
+.cpw-wrapper input[type="text"],.cpw-wrapper input[type="password"]{
+	height:43px;
+	width:304px;
+	color:#222;
+    border-color: #a5a5a5;
+	background-color: #fff;
+	border:1px solid #c2bfc8;
+	border-radius: 4px;
+	margin: 0;
+	padding-left:15px;
+}
+
+
+input::placeholder{
+	color:#a5a5a5;
+}
+.login-wrapper  label{
+	display: inline-block;
+	width:97px;
+	font-size: 18px;
+	font-weight:500;
+	color:#55474a;
+}
+.cpw-wrapper  label{
+	display: inline-block;
+	width:173px;
+	font-size: 18px;
+	font-weight:500;
+	color:#222;
+}
+input,textarea{
+	width:100%;
+	box-sizing: border-box;	
+}
+
+
+.top-wrapper{
+	border-bottom:3px solid #286dee;
+}
+.logo  {
+	margin: 0px auto;
+	width:197px;
+	/*height:150px;*/
+	line-height:150px;
+	vertical-align: middle;
+	text-align: left;
+	padding-right:590px;
+	
+}
+.logo > img{
+	width:197px;
+	/*height: 51px;*/
+	vertical-align: middle;
+	margin:0px auto;
+}
+
+.footer, .footer > div{
+	height:22px;
+}
+.point_color {color:#f55000 !important;}
+.bold {font-weight: bold;}
+
+
+.login-wrapper{
+	margin: 0px auto;
+	margin-top: 53px;
+	width:622px;
+	height:412px;
+	background-color: #eeeced;
+	border:1px solid #929097;
+	text-align: left;
+}
+.login-wrapper div > div:first-child{
+	margin-bottom: 17px;
+}
+
+.cpw-wrapper{
+	margin: 0px auto;
+	margin-top: 53px;
+	width:622px;
+	height:544px;
+	background-color: #e8eaec;
+	border:1px solid #929097;
+	text-align: left;
+}
+.cpw-wrapper  div:nth-child(n+1):nth-child(-n+3){
+	margin-bottom: 17px;
+}
+
+.checkbox-wrap { cursor: pointer;}
+.checkbox-wrap .check-icon  { 
+	display: inline-block;
+	width: 29px; 
+	height: 29px; 
+	background: url(../images/hk/check1_1.png) left center no-repeat; 
+	vertical-align: top;
+	background-size: 29px;
+	padding-right:12px;
+}
+.checkbox-wrap input[type=checkbox] { display: none; }
+.checkbox-wrap input[type=checkbox]:checked + .check-icon { background-image: url(../images/hk/check1.png); }
+
+
+.btn{
+	background-color: #286dee;
+	font-size: 20px;
+	height:56px;
+	width:477px;
+	margin:25px 0 28px 0;
+	color:#fff;
+	text-align:center;
+	cursor: pointer;
+	border:none;
+	font-weight: 500;
+}
+
+.login-menu{
+	display:inline-block;
+	width:475px;
+	border-top: 1px solid #c2bfc8;
+	padding-top: 22px;	
+	font-weight: 500;
+}
+
+.login-menu .manual{
+	font-size: 18px;
+	display:inline-block;
+	float:right;
+	width:150px;
+	text-align: right;
+}
+
+.description{
+	color:#222;
+	border-top: 1px solid #c2bfc8;
+	padding-top:27px;
+}
+.description > span{
+	font-size:18px;
+}
+
+.description  ul{
+	font-size: 14px;
+	padding: 20px 0px;
+	margin: 0px;
+}
+.description i{
+	background: url(../images/notice.png) left center no-repeat; 
+	vertical-align: top;
+	background-size:21px;
+	padding-right:24px;
+}

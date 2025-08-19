@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="category">
+
+	<!-- 카테고리 목록 조회 -->
+	<select id="selectCategory" resultType="CMap">
+		/* category.selectCategory */
+		select ctg_num
+			 , upper_ctg_num
+			 , ctg_nm
+			 , ctg_dpt
+			 , dft_ctg_yn
+			 , cstm_yn
+			 , del_yn
+			 , to_char(create_dt, 'YYYY-MM-DD') as create_dt
+			 , creater
+			 , to_char(update_dt, 'YYYY-MM-DD') as update_dt
+			 , updater
+			 , depart_cd
+			 , use_yn
+			 , shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', cstm_link_div_cd) as cstm_link_div_nm
+			 , cstm_link_div_cd
+		from shfda.tb_ctg_info
+		<where>
+			<if test="ctgNum != null">
+			and ctg_num = #{ctgNum} 
+			</if>
+			<if test="upperCtgNum != null">
+			and upper_ctg_num = #{upperCtgNum}
+			</if>
+			<if test="ctgDpt != null">
+			and ctg_dpt = #{ctgDpt}
+			</if>
+			<if test="departCd != null and !departCd.equals('')">
+			and depart_cd = #{departCd}
+			</if>
+			<if test="dftCtgYn != null">
+			and dft_ctg_yn = #{dftCtgYn}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+			<if test="cstmLinkDivCd != null and !cstmLinkDivCd.toString().equals('')">
+			and cstm_link_div_cd = #{cstmLinkDivCd}
+			</if>
+			and del_yn = 'N'
+		</where>
+		order by cstm_link_div_cd asc, ctg_nm asc
+	</select>
+
+	<!-- 분류 상담원 매핑 초기화 -->
+	<delete id="deleteAllMapping">
+		/* category.deleteAllMapping */
+		delete
+		from shfda.tb_ctg_member_mapping
+	</delete>
+
+	<insert id="insertCategory">
+		/* category.insertCategory */
+		<selectKey keyProperty="ctgNum" order="BEFORE" resultType="String">
+			select shfda.seq_CTG_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_ctg_info
+		(
+		ctg_num
+		, upper_ctg_num
+		, ctg_nm
+		, ctg_dpt
+		, dft_ctg_yn
+		, depart_cd
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, use_yn
+		, cstm_link_div_cd
+		)
+		values
+		(
+		#{ctgNum}
+		, #{upperCtgNum}
+		, #{ctgNm}
+		, #{ctgDpt}
+		, 'N'
+		, #{departCd}
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, #{useYn}
+		, #{cstmLinkDivCd}
+		)
+	</insert>
+
+	<update id="updateCategory">
+		/* category.updateCategory */
+		update shfda.tb_ctg_info
+		set ctg_nm    			= #{ctgNm}
+		  , update_dt 			= sysdate
+		  , depart_cd 			= #{departCd}
+		  <!-- 등록된 카테고리는 채널 수정 불가 -->
+		  <!-- , cstm_link_div_cd 	= #{cstmLinkDivCd} -->
+		  , updater   			= #{sessionMemberUid}
+		  , use_yn	  			= #{useYn}
+		where ctg_num 			= #{ctgNum}
+	</update>
+
+	<update id="deleteCategory">
+		/* category.deleteCategory */
+		update shfda.tb_ctg_info
+		set del_yn    = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where ctg_num = #{ctgNum}
+	</update>
+
+	<!-- 상담원 매핑용 분류 목록 조회 2 depth -->
+	<select id="selectAllCategoryDpt2List" resultType="CMap">
+		/* category.selectAllCategoryDpt2List */
+		select
+			t1.ctg_num1,
+			t1.ctg_nm1,
+			t1.ctg_dpt1,
+			t1.dft_ctg_yn1,
+			count(t1.ctg_num2) over (partition by t1.ctg_num1) as ctg_dpt1_count,
+			t1.cstm_yn1,
+			t1.ctg_num2,
+			t1.ctg_nm2,
+			t1.ctg_dpt2,
+			t1.dft_ctg_yn2,
+			count(t2.member_uid) over (partition by t1.ctg_num2) as ctg_dpt2_count_member,
+			count(t1.ctg_num2) over (partition by t1.ctg_num2) as ctg_dpt2_count,
+			'' as ctg_num3,
+			'' as ctg_nm3,
+			'' as ctg_dpt3,
+			'' as dft_ctg_yn3,
+			'0' as ctg_dpt3_count,
+			t2.member_uid,
+			t2.member_nm,
+			t2.manager_nm,
+			t2.depart_cd as depart_cd,
+			shfda.fn_getCodeNm('DEPART_CD', t2.depart_cd) as depart_nm,
+			t1.cstm_link_div_cd,
+			(count(t1.cstm_link_div_cd) over (partition by t1.cstm_link_div_cd)) as cstm_link_div_cd_count,
+			shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', t1.cstm_link_div_cd) as cstm_link_div_nm
+		from (
+			select
+				t1.ctg_num as ctg_num1,
+				t1.ctg_nm as ctg_nm1,
+				t1.ctg_dpt as ctg_dpt1,
+				t1.dft_ctg_yn as dft_ctg_yn1,
+				t1.cstm_link_div_cd,
+				t1.cstm_yn as cstm_yn1,
+				t2.ctg_num as ctg_num2,
+				t2.ctg_nm as ctg_nm2,
+				t2.ctg_dpt as ctg_dpt2,
+				t2.dft_ctg_yn as dft_ctg_yn2
+			from shfda.tb_ctg_info t1
+
+			left outer join shfda.tb_ctg_info t2
+            on decode((select count(*) from shfda.tb_ctg_info where upper_ctg_num = t1.ctg_num)
+			, 0
+			, (select ctg_num from shfda.tb_ctg_info where dft_ctg_yn = 'Y' and ctg_dpt = '2' and cstm_link_div_cd = t1.cstm_link_div_cd)
+            , t1.ctg_num) = decode((select count(*) from shfda.tb_ctg_info where upper_ctg_num = t1.ctg_num)
+                                    , 0
+                                    , t2.ctg_num
+                                    , t2.upper_ctg_num)
+            and t2.del_yn = 'N'
+
+			where
+				t1.ctg_dpt = 1
+				and t1.del_yn = 'N'
+				and t1.use_yn = 'Y'
+		) t1
+
+		left outer join (
+				select t1.ctg_num, t2.member_uid, t2.depart_cd, t2.name as member_nm, nvl(t3.name, '-') as manager_nm
+				from shfda.tb_ctg_member_mapping t1
+				inner join shfda.tb_member_info t2
+				on t1.member_uid = t2.member_uid and t2.leave_yn = 'N' and t2.valid_yn = 'Y'
+				left outer join shfda.tb_member_info t3
+				on t2.upper_member_uid = t3.member_uid and t3.leave_yn = 'N' and t3.valid_yn = 'Y'
+		) t2
+		on t1.ctg_num2 = t2.ctg_num
+
+		order by t1.cstm_link_div_cd asc, t1.dft_ctg_yn1 asc, t1.ctg_nm1 asc, t1.ctg_nm2 asc, t2.manager_nm asc, t2.member_nm asc
+	</select>
+
+	<!-- 상담원 매핑용 분류 목록 조회 3 depth -->
+	<select id="selectAllCategoryDpt3List" resultType="CMap">
+		/* category.selectAllCategoryDpt3List */
+		select
+			t1.ctg_num1,
+			t1.ctg_nm1,
+			t1.ctg_dpt1,
+			t1.dft_ctg_yn1,
+			count(t1.ctg_num2) over (partition by t1.ctg_num1) as ctg_dpt1_count,
+			t1.cstm_yn1,
+			t1.ctg_num2,
+			t1.ctg_nm2,
+			t1.ctg_dpt2,
+			t1.dft_ctg_yn2,
+			count(t1.ctg_num3) over (partition by t1.ctg_num2)as ctg_dpt2_count,
+			t1.ctg_num3,
+			t1.ctg_nm3,
+			t1.ctg_dpt3,
+			t1.dft_ctg_yn3,
+			count(t2.member_uid) over (partition by t1.ctg_num3) as ctg_dpt3_count,
+			t2.member_nm,
+			t2.manager_nm
+		from (
+			select
+				t1.ctg_num as ctg_num1,
+				t1.ctg_nm as ctg_nm1,
+				t1.ctg_dpt as ctg_dpt1,
+				t1.dft_ctg_yn as dft_ctg_yn1,
+				t1.cstm_yn as cstm_yn1,
+				t2.ctg_num as ctg_num2,
+				t2.ctg_nm as ctg_nm2,
+				t2.ctg_dpt as ctg_dpt2,
+				t2.dft_ctg_yn as dft_ctg_yn2,
+				t3.ctg_num as ctg_num3,
+				t3.ctg_nm as ctg_nm3,
+				t3.ctg_dpt as ctg_dpt3,
+				t3.dft_ctg_yn as dft_ctg_yn3
+			from shfda.tb_ctg_info t1
+
+			left outer join shfda.tb_ctg_info t2
+			on t1.ctg_num = t2.upper_ctg_num and t2.del_yn = 'N'
+			left outer join shfda.tb_ctg_info t3
+			on t2.ctg_num = t3.upper_ctg_num and t3.del_yn = 'N'
+
+			where
+				t1.ctg_dpt = 1
+				and t1.del_yn = 'N'
+		) t1
+
+		left outer join (
+				select t1.ctg_num, t2.member_uid, t2.name as member_nm, nvl(t3.name, '-') as manager_nm
+				from shfda.tb_ctg_member_mapping t1
+				inner join shfda.tb_member_info t2
+				on t1.member_uid = t2.member_uid and t2.leave_yn = 'N' and t2.valid_yn = 'Y'
+				left outer join shfda.tb_member_info t3
+				on t2.upper_member_uid = t3.member_uid and t3.leave_yn = 'N' and t3.valid_yn = 'Y'
+		) t2
+		on t1.ctg_num3 = t2.ctg_num
+
+		order by t1.dft_ctg_yn1, t1.ctg_nm1, t1.ctg_nm2, t1.ctg_nm3, t2.manager_nm, t2.member_nm
+	</select>
+
+	<!-- 상담원 매핑용 분류 목록 조회 (계정관리 팝업화면용) 2 depth -->
+	<select id="selectAllCategoryDpt21List" resultType="CMap">
+		/* category.selectAllCategoryDpt21List */
+		select
+			t1.ctg_num1,
+			t1.ctg_nm1,
+			t1.ctg_dpt1,
+			t1.dft_ctg_yn1,
+			count(t1.ctg_num2) over (partition by t1.ctg_num1) as ctg_dpt1_count,
+			count(t1.ctg_num2) over (partition by t1.ctg_num2) as ctg_dpt2_count,
+			t1.cstm_yn1,
+			t1.ctg_num2,
+			t1.ctg_nm2,
+			t1.ctg_dpt2,
+			t1.dft_ctg_yn2,
+			'' as ctg_num3,
+			'' as ctg_nm3,
+			'' as ctg_dpt3,
+			'' as dft_ctg_yn3,
+			'0' as ctg_dpt3_count,
+			t1.cstm_link_div_cd,
+			(count(t1.cstm_link_div_cd) over (partition by t1.cstm_link_div_cd)) as cstm_link_div_cd_count,
+			shfda.fn_getCodeNm('CSTM_LINK_DIV_CD', t1.cstm_link_div_cd) as cstm_link_div_nm
+		from (
+			select
+				t1.ctg_num as ctg_num1,
+				t1.ctg_nm as ctg_nm1,
+				t1.ctg_dpt as ctg_dpt1,
+				t1.cstm_link_div_cd,
+				t1.dft_ctg_yn as dft_ctg_yn1,
+				t1.cstm_yn as cstm_yn1,
+				t2.ctg_num as ctg_num2,
+				t2.ctg_nm as ctg_nm2,
+				t2.ctg_dpt as ctg_dpt2,
+				t2.dft_ctg_yn as dft_ctg_yn2
+			from shfda.tb_ctg_info t1
+
+			left outer join shfda.tb_ctg_info t2
+            on decode((select count(*) from shfda.tb_ctg_info where upper_ctg_num = t1.ctg_num)
+			, 0
+			, (select ctg_num from shfda.tb_ctg_info where dft_ctg_yn = 'Y' and ctg_dpt = '2' and cstm_link_div_cd = t1.cstm_link_div_cd)
+            , t1.ctg_num) = decode((select count(*) from shfda.tb_ctg_info where upper_ctg_num = t1.ctg_num)
+                                    , 0
+                                    , t2.ctg_num
+                                    , t2.upper_ctg_num)
+            and t2.del_yn = 'N'
+
+			where
+				t1.ctg_dpt = 1
+				<!-- and t1.depart_cd = #{departCd} -->
+				and t1.del_yn = 'N'
+				and t1.use_yn = 'Y'
+			) t1
+		order by t1.cstm_link_div_cd asc, t1.dft_ctg_yn1 asc, t1.ctg_nm1 asc, t1.ctg_nm2 asc
+	</select>
+
+	<!-- 분류 매핑용 상담원 목록 조회 -->
+	<select id="selectMatchCnsrList" resultType="CMap">
+		/* category.selectMatchCnsrList */
+		select
+			t1.member_uid,
+			t1.depart_cd as depart_cd,
+			shfda.fn_getCodeNm('DEPART_CD', t1.depart_cd) as depart_nm,
+			t1.name as member_nm,
+			nvl(t2.name, '-') as manager_nm,
+			nvl2(t3.ctg_num, 'Y', 'N') as match_yn,
+			t1.member_div_cd,
+			shfda.fn_getCodeNm('MEMBER_DIV_CD', t1.member_div_cd) as member_div_nm
+		from shfda.tb_member_info t1
+
+		left outer join shfda.tb_member_info t2
+		on t1.upper_member_uid = t2.member_uid and t2.leave_yn = 'N' and t2.valid_yn = 'Y'
+
+		left outer join shfda.tb_ctg_member_mapping t3
+		on t1.member_uid = t3.member_uid and t3.ctg_num = #{ctgNum}
+
+		where
+			t1.cns_possible_yn = 'Y'
+			<!-- 부서 제한 없이 일정 부서 매니저가 모든 배정된 매니저 또는 상담원 관리 가능 -->
+			and t1.member_div_cd in ('M', 'C')
+			<!-- and t1.depart_cd = #{departCd} -->
+			and t1.leave_yn = 'N'
+			and t1.valid_yn = 'Y'
+
+		order by t1.depart_nm, t1.member_div_cd desc, t1.name
+	</select>
+
+	<!-- 기존 분류에 매칭된 상담원 삭제 -->
+	<delete id="deleteMatchCnsr">
+		/* category.deleteMatchCnsr */
+		delete from shfda.tb_ctg_member_mapping
+		where ctg_num = #{ctgNum}
+	</delete>
+
+	<!-- 신규 매칭된 상담원 등록 -->
+	<insert id="insertMatchCnsr">
+		/* category.insertMatchCnsr */
+		insert into shfda.tb_ctg_member_mapping (
+			member_uid,
+			ctg_num,
+			create_dt,
+			creater
+		)
+		(
+			select
+				member_uid,
+				#{ctgNum},
+				sysdate,
+				#{sessionMemberUid}
+			from shfda.tb_member_info
+			where
+				member_uid in
+				<foreach collection="memberUidArr" item="item" open="(" close=")" separator=",">
+				#{item}
+				</foreach>
+		)
+	</insert>
+
+	<!-- 종료 분류 조회 -->
+	<select id="selectEndCategory" resultType="CMap">
+		/* category.selectEndCategory */
+		select 
+			${depthCd} as depCd, ${depthNm} as depNm 
+		from shfda.tb_end_ctg_info 
+		<where>
+			<if test="srcKeyword != null">
+			and ${srcDepthCd} = #{srcKeyword}
+			</if>
+			<if test="depth1Cd != null">
+			and depth1_cd = #{depth1Cd}
+			</if>
+			<if test="depth2Cd != null">
+			and depth2_cd = #{depth2Cd}
+			</if>
+			<if test="depth3Cd != null">
+			and depth3_cd = #{depth3Cd}
+			</if>
+			<if test="depth4Cd != null">
+			and depth4_cd = #{depth4Cd}
+			</if>
+			and use_yn = 'Y'
+		</where>
+		group by ${depthCd}, ${depthNm} order by ${depthCd}
+	</select>
+	
+	<!-- 종료 분류 검색 -->
+	<select id="selectEndCategorySrc" resultType="CMap">
+		/* category.selectEndCategorySrc */
+		select 
+			${depthCd}, ${depthNm} 
+		from shfda.tb_end_ctg_info 
+		<where>
+			depth1_cd = '00017'
+			and use_yn = 'Y'
+			<if test="srcKeyword != null">
+			and ( DEPTH2_CD_NM like #{srcKeyword} or DEPTH3_CD_NM like #{srcKeyword} or DEPTH4_CD_NM like #{srcKeyword} )
+			</if>
+		</where>
+		order by DEPTH1_CD_NM, DEPTH2_CD_NM, DEPTH3_CD_NM, DEPTH4_CD_NM
+	</select>
+
+
+</mapper>

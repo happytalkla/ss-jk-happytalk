@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="autoCmp">
+
+	<!-- 자동완성 리스트 -->
+	<select id="selectAutoCmpList" resultType="CMap">
+		/* autoCmp.selectAutoCmpList */
+		select
+			t.*,
+			shfda.fn_getCodeNm('AUTOCMP_DIV_CD', t.auto_cmp_div) as auto_cmp_div_nm,
+			shfda.fn_getCodeNm('AUTO_CMP_CUS', t.auto_cmp_cus) as auto_cmp_cus_nm,
+			shfda.fn_getCodeNm('DEPART_CD', t.depart_cd) as depart_cd_nm,
+			to_char(t.create_dt, 'yyyy-mm-dd') as create_date,
+			m.name
+
+		from shfda.tb_auto_cmp t
+
+		inner join shfda.tb_member_info m
+		on t.member_uid = m.member_uid
+
+		<where>
+			<if test="forCounselor != null">
+			and (
+				(t.depart_cd = #{counselorDepartCd} and t.auto_cmp_cus = 'C')
+				<if test="counselorUid != null and counselorUid != ''.toString()">
+				or t.member_uid = #{counselorUid}
+				</if>
+			) 
+			</if>
+			<if test="memberUid != null and memberUid != ''.toString()">
+			and t.member_uid = #{memberUid}
+			</if>
+			<if test="autoCmpId != null and autoCmpId != ''.toString()">
+			and t.auto_cmp_id = #{autoCmpId}
+			</if>
+			<if test="autoCmpDiv != null and autoCmpDiv != ''.toString()">
+			and t.auto_cmp_div = #{autoCmpDiv}
+			</if>
+			<if test="autoCmpCus != null and autoCmpCus != ''.toString()">
+			and t.auto_cmp_cus = #{autoCmpCus}
+			</if>
+			<if test="departCd != null and departCd != ''.toString()">
+			and t.depart_cd = #{departCd}
+			</if>
+			<if test="schText != null and schText != ''.toString()">
+			and LOWER(t.content) like '%' || LOWER(#{schText}) || '%'
+			</if>
+			and t.use_yn = 'Y'
+		</where>
+		order by t.create_dt desc, t.content asc
+	</select>
+
+	<!-- 자동완성 목록 카운트 -->
+	<select id="selectAutoCmpCnt" resultType="int">
+		/* autoCmp.selectAutoCmpCnt */
+		select
+			count(*)
+		from shfda.tb_auto_cmp t
+
+		<where>
+			<if test="memberUid != null and memberUid != ''.toString()">
+			t.member_uid = #{memberUid}
+			</if>
+			<if test="autoCmpId != null and autoCmpId != ''.toString()">
+			and t.auto_cmp_id = #{autoCmpId}
+			</if>
+			<if test="autoCmpDiv != null and autoCmpDiv != ''.toString()">
+			and t.auto_cmp_div = #{autoCmpDiv}
+			</if>
+			<if test="autoCmpCus != null and autoCmpCus != ''.toString()">
+			and t.auto_cmp_cus = #{autoCmpCus}
+			</if>
+			<if test="schText != null and schText != ''.toString()">
+			and LOWER(t.content) like '%' || LOWER(#{schText}) || '%'
+			</if>
+			and t.use_yn = 'Y'
+		</where>
+	</select>
+
+	<!-- 자동완성 등록 -->
+	<insert id="insertAutoCmp">
+		/* autoCmp.insertAutoCmp */
+		<selectKey keyProperty="autoCmpId" order="BEFORE" resultType="String">
+			select shfda.seq_shfda.tb_auto_cmp_id.nextval from dual
+		</selectKey>
+		insert into shfda.tb_auto_cmp
+		(
+			 auto_cmp_id
+			, member_uid
+			, auto_cmp_div
+			, auto_cmp_cus
+			, depart_cd
+			, content
+			, use_yn
+			, create_dt
+			, creater
+			, update_dt
+			, updater
+		)
+		values
+		(
+			 #{autoCmpId}
+			, #{memberUid}
+			, #{autoCmpDiv}
+			, #{autoCmpCus}
+			, #{departCd}
+			, #{content}
+			, 'Y'
+			, sysdate
+			, #{memberUid}
+			, sysdate
+			, #{memberUid}
+		)
+	</insert>
+
+	<!-- 자동완성 수정 -->
+	<update id="updateAutoCmp">
+		/* autoCmp.updateAutoCmp */
+		update shfda.tb_auto_cmp
+		set
+			content = #{content}
+			<if test="autoCmpDiv != null">
+			, auto_cmp_div = #{autoCmpDiv}
+			</if>
+			, update_dt = sysdate
+			, updater = #{memberUid}
+		where
+			auto_cmp_id = #{autoCmpId}
+	</update>
+
+	<!-- 자동완성 삭제 -->
+	<update id="deleteAutoCmp">
+		/* autoCmp.deleteAutoCmp */
+		delete from shfda.tb_auto_cmp
+		where
+			auto_cmp_id = #{autoCmpId}
+	</update>
+</mapper>

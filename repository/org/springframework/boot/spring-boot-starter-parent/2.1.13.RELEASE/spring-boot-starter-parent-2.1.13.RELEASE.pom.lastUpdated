@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Mar 10 15:30:01 KST 2022
+https\://repo.maven.apache.org/maven2/.lastUpdated=1646893801516
+file\:///${project.basedir}/repository/.error=
+file\:///${project.basedir}/repository/.lastUpdated=1646893799834

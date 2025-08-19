@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BotKeyword">
+
+	<select id="select" resultType="BotKeyword">
+		/* BotKeyword.select */
+		select *
+		from shfda.tb_bot_keyword
+		<where>
+			<if test="id != null">
+			and id = #{id}
+			</if>
+			<if test="blockId != null">
+			and block_id = #{blockId}
+			</if>
+			<if test="keyword != null">
+			and keyword = #{keyword}
+			</if>
+		</where>
+
+		<if test="orderby != null">
+		order by ${orderby}
+		</if>
+	</select>
+
+	<sql id="seq">
+		select shfda.seq_bot_keyword.nextval from dual
+	</sql>
+
+	<update id="save">
+		/* BotKeyword.save */
+		merge into shfda.tb_bot_keyword
+		using dual
+		on (id = #{id})
+
+		when not matched then
+		insert
+		(
+		    id,
+		    block_id,
+		    keyword,
+		    modified,
+		    modifier
+		)
+		values
+		(
+			shfda.seq_bot_keyword.nextval
+			, #{blockId}
+			, #{keyword}
+			, sysdate
+			, 1
+		)
+
+		when matched then
+		update
+		set
+		    block_id = #{blockId},
+		    keyword = #{keyword},
+		    modified = sysdate,	
+		    modifier = 1,		    
+		where
+			id = #{id}
+	</update>
+
+	<update id="delete">
+		/* BotKeyword.delete */
+		delete from shfda.tb_bot_keyword
+		where
+			<if test="id != null">
+			id = #{id}
+			</if>
+	</update>
+</mapper>

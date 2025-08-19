@@ -1,0 +1,314 @@
+html, body {
+	height: 100%;
+	overflow-y: hidden;
+}
+
+body {
+	min-width: 1250px;
+}
+
+* {
+	font-size: 12px;
+	color: #000000;
+}
+
+#container {
+	background-color: #e8e6ef;
+}
+
+.row, .col {
+	margin: 0;
+	padding: 0;
+}
+
+.btn-primary,
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active {
+	height: 37px;
+	border: 0;
+	padding: 0 30px;
+	background-color: #635053;
+}
+.btn-secondary,
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active, .btn-secondary.active {
+	height: 37px;
+	border: 0;
+	padding: 0 15px;
+	background-color: gray;
+}
+.btn-normal,
+.btn-normal:hover, .btn-normal:focus, .btn-normal:active, .btn-normal.active {
+	height: 37px;
+	border: 0;
+	padding: 0 15px;
+	background-color: silver;
+}
+.btn-danger,
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active, .btn-danger.active {
+	height: 37px;
+	border: 0;
+	padding: 0 15px;
+}
+
+.label {
+	margin-right: 10px;
+	font-size: 14px;
+	font-weight: normal;
+	color: #222;
+}
+
+.limit {
+	font-size: 10px;
+	font-weight: normal;
+	color: #888;
+}
+
+.limit .count {
+	font-size: 10px;
+	font-weight: normal;
+}
+
+.round-tooltip {
+	margin-top: 2px;
+	margin-left: 5px;
+	font-size: 15px;
+	color: #635053;
+}
+
+/*.tooltip-inner {*/
+/*	padding: 5px 10px;*/
+/*	font-size: 11px;*/
+/*	font-weight: normal;*/
+/*	border-radius: 3px;*/
+/*	background-color: #635053;*/
+/*	color: #fff;*/
+/*	word-break: keep-all;*/
+/*	text-align: left;*/
+/*}*/
+
+.fas {
+	font-size: 15px;
+	cursor: pointer;
+	color: #635053;
+}
+.fas.text {
+	cursor: text;
+	color: #000000;
+}
+.add-property .fas {
+	margin-right: 10px;
+	font-size: 30px;
+	vertical-align: middle;
+	color: #000000;
+}
+
+/* ****************************************************************************
+ * 헤더
+ * **************************************************************************** */
+#header {
+	justify-content: initial;
+	width: 100%;
+	height: 62px;
+	padding: 0;
+	background-color: #2e2c33;
+}
+
+#header img {
+	/* height: 62px; */
+	width: 152px;
+	margin-left: 10px;
+	margin-right: 10px;
+}
+#header .title {
+	width: 400px;
+	margin: 0;
+	font-size: 16px;
+	font-weight: normal;
+	color: #fff;
+}
+#header .btn-param {
+	background-color: #ffaa00;
+	color: #fff;
+}
+
+#scenario-list {
+	margin-left: 30px;
+	color: silver;
+	font-size: 14px;
+	font-weight: normal;
+}
+#scenario-list a.active {
+	color: white;
+	font-weight: bold;
+}
+#scenario-list a {
+	color: silver;
+}
+
+/* ****************************************************************************
+ * 유틸
+ * **************************************************************************** */
+#message-modal a {
+	display: inline-block;
+	margin-top: 3px;
+	color: #f55000;
+}
+
+/* ****************************************************************************
+ * 왼쪽, 목록 영역
+ * **************************************************************************** */
+.aside-top {
+	/* padding: 20px; */
+	inline-size: inherit;
+	padding: 20px 10px 20px 10px;
+	border-bottom: 2px solid black;
+	background-color: #fff;
+}
+
+.aside-top .input {
+	/* width: 100%; */
+	height: 35px;
+	margin-right: 10px;
+	border-radius: 3px;
+}
+
+.list-container {
+	position: relative;
+	background-color: #fff;
+}
+
+.list-container .list-group {
+	overflow: hidden;
+	overflow-y: auto;
+	height: 400px;
+}
+
+.list-container .list-group .list-group-item {
+	padding: 10px;
+}
+
+.list-container .list-group .list-group-item .play {
+	/*width: 54px;*/
+	width: 22px;
+	height: 22px;
+	/*margin-right: 10px;
+	line-height: 18px;
+	border-radius: 50px;
+	border: 2px solid #f55000;*/
+	font-size: 14px;
+	font-weight: 900;
+/* 	color: #f55000; */
+	color: #286dee;
+	text-align: center;
+	text-decoration: none;
+}
+/*
+.list-container .play span {
+	margin-left: 3px;
+	font-size: 12px;
+	font-weight: 500;
+}*/
+
+.list-container .list-group .list-group-item a.text-truncate {
+	float: right;
+    width: 90%;
+    overflow: hidden;
+    text-align: left !important;
+    word-wrap: break-word;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    display: inline-block;
+    font-size: 1em;
+    font-weight: normal;
+    color: #888;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+    vertical-align: middle;
+}
+
+.list-container .list-group-item.selected a.text-truncate {
+	font-weight: bold;
+	/* color: #f55000; */
+	color: #007bff;
+}
+
+.list-container .handling {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 100%;
+	padding: 10px 20px 20px 20px;
+	border-top: 1px solid #c2bfc8;
+}
+
+.list-container .handling .btn {
+	width: 100%;
+	height: 47px;
+	line-height: 45px;
+	margin-top: 10px;
+	padding: 0;
+/* 	border: 1px solid #f55000; */
+	border: 1px solid #286dee;
+	background-color: #fff;
+	font-size: 14px;
+	font-weight: 500;
+/* 	color: #f55000; */
+	color: #286dee;
+}
+
+.list-container .handling .btn.btn-primary {
+/* 	background-color: #f55000; */
+	background-color: #286dee;
+	color: #fff;
+}
+
+/* ****************************************************************************
+ * 오른쪽, 목록 영역
+ * **************************************************************************** */
+.right-container {
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+/* ****************************************************************************
+ * 본문 영역
+ * **************************************************************************** */
+.main-container,
+.main-control {
+	padding: 0;
+	background-color: #f4f3f7;
+}
+
+.main-container .main-control {
+	padding: 20px;
+	border-bottom: 2px solid black;
+}
+
+.main-container .main-control .input {
+	width: 464px;
+	height: 35px;
+	margin-right: 10px;
+}
+
+.detail-container {
+	padding-top: 20px;
+	overflow-y: auto;
+}
+.detail-section {
+	width: 850px;
+	padding: 0 20px;
+}
+
+.btn-create-text-wrapper {
+	padding: 10px 30px;
+}
+
+.btn-create-text-wrapper .btn {
+	width: 850px;
+	height: 67px;
+	background-color: #635053;
+	border: 0;
+	font-size: 14px;
+	font-weight: normal;
+	color: #fff;
+}

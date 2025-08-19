@@ -1,0 +1,38 @@
+{
+	"version": "2.0",
+	"template": {
+		"outputs": [
+			{
+				"simpleText": {
+					"text": "계약대출 신청 안내사항\n\n1. 당사에 체결된 보험계약을 담보로 대출을 진행하는 서비스 입니다.\n\n2. 신청가능 시간과 서비스 불가 시간을 체크해주세요~\n▶ 신청 가능시간 : 08:00 ~ 03:30 (365일)\n단, 23:30 ~ 00:30 사이에는 은행 점검 시간으로 서비스 불가\n\n3. 금융사고 예방을 위하여 홈페이지 회원가입 및 1차 공인인증서 -> 2차 휴대폰인증이 필요하오니 사전에 공인인증서 준비 부탁드려요~"
+				}
+			},
+			{
+				"basicCard": {
+					"description": "계약대출은 삼성증권 모바일 홈페이지에서 신청이 가능해요! \n홈페이지로 이동하시겠어요?",
+					"buttons": [
+						{
+							"label": "대출 신청하러 가기!!",
+							"action": "osLink",
+							"webLinkUrl": "https://localhost:8080/LCW/login.do?cbUserId=c2a3b795-68a1-4390-8a5c-b1e6ec0787dc&channel=A",
+							"osLink": {
+								"mobile": "https://localhost:8080/LCM/login.do?cbUserId=c2a3b795-68a1-4390-8a5c-b1e6ec0787dc&channel=A",
+								"pc": "https://localhost:8080/LCW/login.do?cbUserId=c2a3b795-68a1-4390-8a5c-b1e6ec0787dc&channel=A",
+								"win": "https://localhost:8080/LCW/login.do?cbUserId=c2a3b795-68a1-4390-8a5c-b1e6ec0787dc&channel=A",
+								"web": "https://localhost:8080/LCW/login.do?cbUserId=c2a3b795-68a1-4390-8a5c-b1e6ec0787dc&channel=A"
+							}
+						}
+					]
+				}
+			}
+		],
+		"quickReplies": [
+			{
+				"action": "block",
+				"label": "대출가능금액 조회하기",
+				"messageText": "대출가능금액 조회하기",
+				"blockId": "5d887f76ffa7480001515dd3"
+			}
+		]
+	}
+}

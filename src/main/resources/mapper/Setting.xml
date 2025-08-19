@@ -1,0 +1,1436 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="setting">
+
+	<!-- 근무시간 설정 조회 -->
+	<select id="selectWorkTime" resultType="CMap">
+		/* setting.selectWorkTime */
+		select site_id
+			 , weekday_start_time                                                          AS weekday_start_time
+			 , substr(weekday_start_time, 1, 2) || ':' || substr(weekday_start_time, 3, 2) AS weekday_start_time2
+			 , substr(weekday_start_time, 1, 2)                                            AS weekday_start_time3
+			 , substr(weekday_start_time, 3, 2)                                            AS weekday_start_time4
+			 , weekday_end_time                                                            AS weekday_end_time
+			 , substr(weekday_end_time, 1, 2) || ':' || substr(weekday_end_time, 3, 2)     AS weekday_end_time2
+			 , substr(weekday_end_time, 1, 2)                                              AS weekday_end_time3
+			 , substr(weekday_end_time, 3, 2)                                              AS weekday_end_time4
+			 , sat_work_yn                                                                 AS sat_work_yn
+			 , sat_start_time                                                              AS sat_start_time
+			 , substr(sat_start_time, 1, 2) || ':' || substr(sat_start_time, 3, 2)         AS sat_start_time2
+			 , substr(sat_start_time, 1, 2)                                                AS sat_start_time3
+			 , substr(sat_start_time, 3, 2)                                                AS sat_start_time4
+			 , sat_end_time                                                                AS sat_end_time
+			 , substr(sat_end_time, 1, 2) || ':' || substr(sat_end_time, 3, 2)             AS sat_end_time2
+			 , substr(sat_end_time, 1, 2)                                                  AS sat_end_time3
+			 , substr(sat_end_time, 3, 2)                                                  AS sat_end_time4
+			 , sun_work_yn                                                                 AS sun_work_yn
+			 , sun_start_time                                                              AS sun_start_time
+			 , substr(sun_start_time, 1, 2) || ':' || substr(sun_start_time, 3, 2)         AS sun_start_time2
+			 , substr(sun_start_time, 1, 2)                                                AS sun_start_time3
+			 , substr(sun_start_time, 3, 2)                                                AS sun_start_time4
+			 , sun_end_time                                                                AS sun_end_time
+			 , substr(sun_end_time, 1, 2) || ':' || substr(sun_end_time, 3, 2)             AS sun_end_time2
+			 , substr(sun_end_time, 1, 2)                                                  AS sun_end_time3
+			 , substr(sun_end_time, 3, 2)                                                  AS sun_end_time4
+			 , create_dt                                                                   AS create_dt
+			 , creater                                                                     AS creater
+			 , update_dt                                                                   AS update_dt
+			 , updater                                                                     AS updater
+			 , channel                                                                     AS channel
+			 , shfda.fn_getcodenm('CSTM_LINK_DIV_CD', channel)                             AS channel_nm
+			 , depart_cd                                                                   AS depart_cd
+		from shfda.tb_set_work_time
+		where 		
+			site_id = #{siteId}
+			<if test="channel != null">
+			 and channel = #{channel}
+			</if>
+			<if test="departCd != null">
+			 and depart_Cd = #{departCd}
+			</if>
+	</select>
+	
+	<select id="selectTMWorkTime" resultType="CMap">
+		/* setting.selectTMWorkTime */
+		select site_id
+			 , tm_weekday_start_time as weekday_start_time
+			 , substr(tm_weekday_start_time, 1, 2) || ':' || substr(tm_weekday_start_time, 3, 2) as weekday_start_time2
+			 , substr(tm_weekday_start_time, 1, 2)                                            as weekday_start_time3
+			 , substr(tm_weekday_start_time, 3, 2)                                            as weekday_start_time4
+			 , tm_weekday_end_time
+			 , substr(tm_weekday_end_time, 1, 2) || ':' || substr(tm_weekday_end_time, 3, 2)     as weekday_end_time2
+			 , substr(tm_weekday_end_time, 1, 2)                                              as weekday_end_time3
+			 , substr(tm_weekday_end_time, 3, 2)                                              as weekday_end_time4
+			 , tm_sat_work_yn as sat_work_yn
+			 , tm_sat_start_time as sat_start_time
+			 , substr(tm_sat_start_time, 1, 2) || ':' || substr(tm_sat_start_time, 3, 2)         as sat_start_time2
+			 , substr(tm_sat_start_time, 1, 2)                                                as sat_start_time3
+			 , substr(tm_sat_start_time, 3, 2)                                                as sat_start_time4
+			 , tm_sat_end_time as sat_end_time
+			 , substr(tm_sat_end_time, 1, 2) || ':' || substr(tm_sat_end_time, 3, 2)             as sat_end_time2
+			 , substr(tm_sat_end_time, 1, 2)                                                  as sat_end_time3
+			 , substr(tm_sat_end_time, 3, 2)                                                  as sat_end_time4
+			 , tm_sun_work_yn as sun_work_yn
+			 , tm_sun_start_time as sun_start_time
+			 , substr(tm_sun_start_time, 1, 2) || ':' || substr(tm_sun_start_time, 3, 2)         as sun_start_time2
+			 , substr(tm_sun_start_time, 1, 2)                                                as sun_start_time3
+			 , substr(tm_sun_start_time, 3, 2)                                                as sun_start_time4
+			 , tm_sun_end_time sun_end_time
+			 , substr(tm_sun_end_time, 1, 2) || ':' || substr(tm_sun_end_time, 3, 2)             as sun_end_time2
+			 , substr(tm_sun_end_time, 1, 2)                                                  as sun_end_time3
+			 , substr(tm_sun_end_time, 3, 2)                                                  as sun_end_time4
+			 , create_dt
+			 , creater
+			 , update_dt
+			 , updater
+		from shfda.tb_set_work_time
+	</select>	
+	
+	<select id="selectCSWorkTime" resultType="CMap">
+		/* setting.selectCSWorkTime */
+		select site_id
+			 , cs_weekday_start_time as weekday_start_time
+			 , substr(cs_weekday_start_time, 1, 2) || ':' || substr(cs_weekday_start_time, 3, 2) as weekday_start_time2
+			 , substr(cs_weekday_start_time, 1, 2)                                            as weekday_start_time3
+			 , substr(cs_weekday_start_time, 3, 2)                                            as weekday_start_time4
+			 , cs_weekday_end_time as weekday_end_time
+			 , substr(cs_weekday_end_time, 1, 2) || ':' || substr(cs_weekday_end_time, 3, 2)     as weekday_end_time2
+			 , substr(cs_weekday_end_time, 1, 2)                                              as weekday_end_time3
+			 , substr(cs_weekday_end_time, 3, 2)                                              as weekday_end_time4
+			 , cs_sat_work_yn as sat_work_yn
+			 , cs_sat_start_time as sat_start_time
+			 , substr(cs_sat_start_time, 1, 2) || ':' || substr(cs_sat_start_time, 3, 2)         as sat_start_time2
+			 , substr(cs_sat_start_time, 1, 2)                                                as sat_start_time3
+			 , substr(cs_sat_start_time, 3, 2)                                                as sat_start_time4
+			 , cs_sat_end_time as sat_end_time
+			 , substr(cs_sat_end_time, 1, 2) || ':' || substr(cs_sat_end_time, 3, 2)             as sat_end_time2
+			 , substr(cs_sat_end_time, 1, 2)                                                  as sat_end_time3
+			 , substr(cs_sat_end_time, 3, 2)                                                  as sat_end_time4
+			 , cs_sun_work_yn as sun_work_yn
+			 , cs_sun_start_time as sun_start_time
+			 , substr(cs_sun_start_time, 1, 2) || ':' || substr(cs_sun_start_time, 3, 2)      as sun_start_time2
+			 , substr(cs_sun_start_time, 1, 2)                                                as sun_start_time3
+			 , substr(cs_sun_start_time, 3, 2)                                                as sun_start_time4
+			 , cs_sun_end_time as sun_end_time
+			 , substr(cs_sun_end_time, 1, 2) || ':' || substr(cs_sun_end_time, 3, 2)             as sun_end_time2
+			 , substr(cs_sun_end_time, 1, 2)                                                  as sun_end_time3
+			 , substr(cs_sun_end_time, 3, 2)                                                  as sun_end_time4
+			 , create_dt
+			 , creater
+			 , update_dt
+			 , updater
+		from shfda.tb_set_work_time
+	</select>
+	
+
+	<!-- 기본 설정 정보 조회 -->
+	<!-- IPCC_MCH e.chatbot_use_yn / e_unsocial_accept_yn 컬럼 추가 -->
+	<select id="selectDefaultSet" resultType="CMap">
+		/* setting.selectDefaultSet */
+		select site_id
+			 , work_status_cd
+			 , cnsr_max_cnt
+			 , auto_mat_use_yn
+			 , self_choi_use_yn
+			 , ctg_mapping_use_yn
+			 , auto_chng_appr_yn
+			 , cnsr_once_max_cnt
+			 , pwd_term_use_yn
+			 , pwd_term
+			 , pass_time_use_yn
+			 , ctg_mgt_dpt
+			 , skin_num
+			 , license
+			 , to_char(create_dt, 'yyyy-mm-dd') as create_dt
+			 , creater
+			 , to_char(update_dt, 'yyyy-mm-dd') as update_dt
+			 , updater
+			 , a_chatbot_use_yn
+			 , a_unsocial_accept_yn
+			 , b_chatbot_use_yn
+			 , b_unsocial_accept_yn
+			 , c_chatbot_use_yn
+			 , c_unsocial_accept_yn
+			 , d_chatbot_use_yn
+			 , d_unsocial_accept_yn
+			 , e_chatbot_use_yn     AS e_chatbot_use_yn
+			 , e_unsocial_accept_yn AS e_unsocial_accept_yn
+		from shfda.tb_set
+		where 1=1
+		<!-- 
+		<if test="departCd != null and departCd != ''">
+		  AND depart_cd= #{departCd}
+		</if>		
+		 -->	
+		  AND rownum = 1
+	</select>
+
+	<!-- 스킨 정보 조회 -->
+	<select id="selectCustomerSkin" resultType="CMap">
+		/* setting.selectCustomerSkin */
+		select b.skin_num
+			 , b.skin_nm
+			 , b.skin_css_url
+			 , b.del_yn
+			 , b.create_dt
+			 , b.creater
+			 , b.update_dt
+			 , b.updater
+		from shfda.tb_set a
+				 inner join shfda.tb_chat_skin b on (a.skin_num = b.skin_num)
+		where 1=1
+		<if test="departCd != null and departCd != ''">
+		    AND depart_cd= #{departCd}
+		</if>			
+			AND rownum = 1
+	</select>
+
+
+	<!-- 기본 설정 정보 변경 -->
+	<update id="updateSet">
+		/* setting.updateSet */
+		update shfda.tb_set
+		set update_dt = sysdate
+		, updater = #{sessionMemberUid}
+		<if test="selBtn != null and selBtn == 'workStatusCd'.toString()">
+			, work_status_cd = #{workStatusCd}
+		</if>
+		<if test="selBtn != null and selBtn == 'autoMatUseYn'.toString()">
+			, auto_mat_use_yn = #{autoMatUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'selfChoiUseYn'.toString()">
+			, self_choi_use_yn = #{selfChoiUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'ctgMappingUseYn'.toString()">
+			, ctg_mapping_use_yn = #{ctgMappingUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'chatbotUseYn'.toString()">
+			, A_chatbot_use_yn = #{chatbotUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'chatbotUseYn'.toString()">
+			, b_chatbot_use_yn = #{b_chatbotUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'chatbotUseYn'.toString()">
+			, c_chatbot_use_yn = #{c_chatbotUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'chatbotUseYn'.toString()">
+			, d_chatbot_use_yn = #{d_chatbotUseYn}
+		</if>
+		<!-- IPCC_MCH ARS 채널 추가 관련 -->
+		<if test="selBtn != null and selBtn == 'chatbotUseYn'.toString()">
+			, e_chatbot_use_yn = #{e_chatbotUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'autoChngApprYn'.toString()">
+			, auto_chng_appr_yn = #{autoChngApprYn}
+		</if>
+		
+		<if test="selBtn != null and selBtn == 'cnsrMaxCnt'.toString()">
+			, cnsr_max_cnt = #{cnsrMaxCnt}
+		</if>
+		<if test="selBtn != null and selBtn == 'cnsrOnceMaxCnt'.toString()">
+			, cnsr_once_max_cnt = #{cnsrOnceMaxCnt}
+		</if>
+		<if test="selBtn != null and selBtn == 'unsocialAcceptYn'.toString()">
+			, A_unsocial_accept_yn = #{unsocialAcceptYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'unsocialAcceptYn'.toString()">
+			, B_unsocial_accept_yn = #{KKunsocialAcceptYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'unsocialAcceptYn'.toString()">
+			, C_unsocial_accept_yn = #{O2unsocialAcceptYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'unsocialAcceptYn'.toString()">
+			, D_unsocial_accept_yn = #{MPunsocialAcceptYn}
+		</if>
+		<!-- IPCC_MCH ARS 채널 추가 관련 -->
+		<if test="selBtn != null and selBtn == 'unsocialAcceptYn'.toString()">
+			, E_unsocial_accept_yn = #{ARSunsocialAcceptYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'pwdTerm'.toString()">
+			, pwd_term_use_yn = #{pwdTermUseYn}
+			, pwd_term = #{pwdTerm}
+		</if>
+		<if test="selBtn != null and selBtn == 'passTimeUseYn'.toString()">
+			, pass_time_use_yn = #{passTimeUseYn}
+		</if>
+		<if test="selBtn != null and selBtn == 'ctgMgtDpt'.toString()">
+			, ctg_mgt_dpt = #{ctgMgtDpt}
+		</if>
+		where 1=1
+			AND site_id = #{siteId}
+		<!-- 	
+		<if test="departCd != null and departCd != ''">
+		    AND depart_cd= #{departCd}
+		</if>	
+		 -->
+			AND rownum=1			
+	</update>
+
+
+	<!-- 근무 시간 설정 변경 -->
+	<update id="updateSetWorkTime">
+		/* setting.updateSetWorkTime */
+		update shfda.tb_set_work_time
+		set weekday_start_time = #{weekStartTime}
+		  , weekday_end_time   = #{weekEndTime}  
+		  , sat_work_yn        = #{satWorkYn}    
+		  , sat_start_time     = #{satStartTime} 
+		  , sat_end_time       = #{satEndTime}   
+		  , sun_work_yn        = #{sunWorkYn}    
+		  , sun_start_time     = #{sunStartTime} 
+		  , sun_end_time       = #{sunEndTime}   
+		  , update_dt          = sysdate
+		  , updater            = #{sessionMemberUid}
+		where 1=1
+		<if test="siteId != null">
+		 and site_id = #{siteId}
+		</if>
+		<if test="channel != null">
+		 and channel = #{channel}
+		</if>
+		<if test="departCd != null">
+		 and depart_Cd = #{departCd}
+		</if>
+	</update>
+	
+	<!-- TM 근무 시간 설정 변경 -->
+	<update id="updateTMSetWorkTime">
+		/* setting.updateTMSetWorkTime */
+		update shfda.tb_set_work_time
+		set tm_weekday_start_time = #{weekStartTime1} || #{weekStartTime2} 
+		  , tm_weekday_end_time   = #{weekEndTime1} || #{weekEndTime2}     
+		  , tm_sat_work_yn        = #{satWorkYn}                           
+		  , tm_sat_start_time     = #{satStartTime1} || #{satStartTime2}   
+		  , tm_sat_end_time       = #{satEndTime1} || #{satEndTime2}       
+		  , tm_sun_work_yn        = #{sunWorkYn}                           
+		  , tm_sun_start_time     = #{sunStartTime1} || #{sunStartTime2}   
+		  , tm_sun_end_time       = #{sunEndTime1} || #{sunEndTime2}       
+		  , update_dt          = sysdate
+		  , updater            = #{sessionMemberUid}
+		where site_id = #{siteId}
+	</update>
+	
+	<!-- CS 근무 시간 설정 변경 -->
+	<update id="updateCSSetWorkTime">
+		/* setting.updateCSSetWorkTime */
+		update shfda.tb_set_work_time
+		set cs_weekday_start_time = #{weekStartTime1} || #{weekStartTime2}   
+		  , cs_weekday_end_time   = #{weekEndTime1} || #{weekEndTime2}       
+		  , cs_sat_work_yn        = #{satWorkYn}                             
+		  , cs_sat_start_time     = #{satStartTime1} || #{satStartTime2}     
+		  , cs_sat_end_time       = #{satEndTime1} || #{satEndTime2}         
+		  , cs_sun_work_yn        = #{sunWorkYn}                             
+		  , cs_sun_start_time     = #{sunStartTime1} || #{sunStartTime2}     
+		  , cs_sun_end_time       = #{sunEndTime1} || #{sunEndTime2}         
+		  , update_dt          = sysdate
+		  , updater            = #{sessionMemberUid}
+		where site_id = #{siteId}
+	</update>	
+
+	<!-- 메세지 설정 정보 조회 -->
+	<select id="selectMessage" resultType="CMap">
+		/* setting.selectMessage */
+		select site_id
+ 			 , cns_frt_msg_text_use_yn
+			 , cns_frt_msg
+			 , cns_frt_msg_img_use_yn
+			 , cns_frt_msg_img
+			 , not_cns_msg_use_yn
+			 , not_cns_msg
+			 , busy_msg_use_yn
+			 , busy_msg
+			 
+			 , delay_guide_msg
+			 , delay_guide_use_yn
+			 , nvl(floor(delay_guide_time*60 / 86400), 0)                                          		as delay_guide_day
+			 , nvl(to_char(to_date(ceil(mod(delay_guide_time*60, 86400)), 'SSSSS'), 'HH24'), '00') 		as delay_guide_hr
+			 , nvl(to_char(to_date(ceil(mod(delay_guide_time*60, 86400)), 'SSSSS'), 'mi'), '00')   		as delay_guide_min
+			 
+			 , delay_stop_msg
+			 , delay_stop_use_yn
+			 , nvl(floor(delay_stop_time*60 / 86400), 0)                                          		as delay_stop_day
+			 , nvl(to_char(to_date(ceil(mod(delay_stop_time*60, 86400)), 'SSSSS'), 'HH24'), '00') 		as delay_stop_hr
+			 , nvl(to_char(to_date(ceil(mod(delay_stop_time*60, 86400)), 'SSSSS'), 'mi'), '00')   		as delay_stop_min
+			 
+			 , cnsr_end_msg_use_yn
+			 , cnsr_end_msg
+			 
+			 , cstm_end_msg_use_yn
+			 , cstm_end_msg
+			 , cns_evl_use_yn
+			 , cns_evl_guide_msg
+			 , unsocial_msg_use_yn
+			 , unsocial_msg
+			 , cns_title
+			 , to_char(create_dt, 'yyyy-mm-dd') as create_dt
+			 , creater
+			 , to_char(update_dt, 'yyyy-mm-dd') as update_dt
+			 , updater
+			 , org_file_nm
+			 , depart_cd
+			 , cns_wait_use_yn
+			 , cns_wait_msg
+			 , cns_wait_cnt
+			 , cstm_proh_use_yn
+			 , cstm_proh_msg
+			 , cns_wait_pers_use_yn
+			 , cns_wait_pers_msg
+			 , bot_frt_msg_text_use_yn
+			 , bot_frt_msg
+			 , bot_frt_msg_img_use_yn
+			 , bot_frt_msg_img
+			 , bot_cstm_err_msg_use_yn
+			 , bot_cstm_err_msg
+		from shfda.tb_set_msg
+		where 1=1
+		<if test="siteId != null">
+		 and site_id = #{siteId}
+		</if>
+		<if test="channel != null">
+		 and channel = #{channel}
+		</if>
+		<if test="departCd != null">
+		 and depart_Cd = #{departCd}
+		</if>
+	</select>
+
+
+	<!-- 메세지 설정 정보 변경 -->
+	<update id="updateMessage">
+		/* setting.updateMessage */
+		update shfda.tb_set_msg
+		set update_dt = sysdate
+		, updater = #{sessionMemberUid}
+		<if test="selBtn != null and selBtn == 'cnsFrtMsg'.toString()">
+			, cns_frt_msg_text_use_yn = #{cnsFrtMsgTextUseYn}
+			, cns_frt_msg = #{cnsFrtMsg}
+			, cns_frt_msg_img_use_yn = #{cnsFrtMsgImgUseYn}
+			, cns_frt_msg_img = #{cnsFrtMsgImg}
+		</if>
+		<if test="selBtn != null and selBtn == 'notCnsMsg'.toString()">
+			, not_cns_msg_use_yn = #{notCnsMsgUseYn}
+			, not_cns_msg = #{notCnsMsg}
+		</if>
+		<if test="selBtn != null and selBtn == 'busyMsg'.toString()">
+			, busy_msg_use_yn = #{busyMsgUseYn}
+			, busy_msg = #{busyMsg}
+		</if>
+		<if test="selBtn != null and selBtn == 'delayGuideMsg'.toString()">
+			, delay_guide_msg = #{delayGuideMsg}
+			
+			<!-- 채널 별 사용 여부 업데이트 -->
+			<if test="delayGuideUseYn != null">
+			, delay_guide_use_yn = #{delayGuideUseYn}				<!-- 웹 -->
+			</if>
+			
+			
+			<!-- 채널별 딜레이 시간 정보 분으로 환산 후 저장, 설정 Y  일경우만 시간 저장-->
+			<if test="delayGuideUseYn == 'Y'.toString()">
+			, delay_guide_time = (#{delayGuideDay} * 24 * 60) + (#{delayGuideHr} * 60) + #{delayGuideMin}                      <!-- 웹 -->     
+			</if>
+			
+		</if>
+		<if test="selBtn != null and selBtn == 'delayStopMsg'.toString()">
+			, delay_stop_msg = #{delayStopMsg}
+			
+			<!-- 채널 별 사용 여부 업데이트 -->
+			, delay_stop_use_yn = #{delayStopUseYn}					<!-- 웹 -->     
+			
+			
+			<!-- 채널별 딜레이 시간 정보 분으로 환산 후 저장,  설정 Y  일경우만 시간 저장-->
+			<if test="delayStopUseYn == 'Y'.toString()">
+			, delay_stop_time = (#{delayStopDay} * 24 * 60) + (#{delayStopHr} * 60) + #{delayStopMin}                      <!-- 웹 -->    
+			</if>
+			
+			
+		</if>
+		<if test="selBtn != null and selBtn == 'cnsrEndMsg'.toString()">
+			, cnsr_end_msg = #{cnsrEndMsg}
+			
+			<!-- 채널 별 사용 여부 업데이트 -->
+			, cnsr_end_msg_use_yn = #{cnsrEndMsgUseYn}             <!-- 웹 -->      
+		
+		</if>
+		<if test="selBtn != null and selBtn == 'cstmEndMsg'.toString()">
+			, cstm_end_msg_use_yn = #{cstmEndMsgUseYn}
+			, cstm_end_msg = #{cstmEndMsg}
+		</if>
+		<if test="selBtn != null and selBtn == 'cnsEvlGuideMsg'.toString()">
+			, cns_evl_use_yn = #{cnsEvlUseYn}
+			, cns_evl_guide_msg = #{cnsEvlGuideMsg}
+		</if>
+		<if test="selBtn != null and selBtn == 'unsocialMsg'.toString()">
+			, unsocial_msg_use_yn = #{unsocialMsgUseYn}
+			, unsocial_msg = #{unsocialMsg}
+		</if>
+
+		<if test="selBtn != null and selBtn == 'cnsWaitMsg'.toString()">
+			, cns_wait_use_yn = #{cnsWaitUseYn}
+			, cns_wait_msg = #{cnsWaitMsg}
+		</if>		
+		<if test="selBtn != null and selBtn == 'cstmProhMsg'.toString()">
+			, cstm_proh_use_yn = #{cstmProhUseYn}
+			, cstm_proh_msg = #{cstmProhMsg}
+		</if>			
+		<if test="selBtn != null and selBtn == 'cnsWaitPersMsg'.toString()">
+			, cns_wait_pers_use_yn = #{cnsWaitPersUseYn}
+			, cns_wait_pers_msg = #{cnsWaitPersMsg}
+			, cns_wait_cnt = #{cnsWaitCnt}
+		</if>	
+		
+		<if test="selBtn != null and selBtn == 'botFrtMsg'.toString()">
+			, bot_frt_msg_text_use_yn = #{botFrtMsgTextUseYn}
+			, bot_frt_msg = #{botFrtMsg}
+			, bot_frt_msg_img_use_yn = #{botFrtMsgImgUseYn}
+			, bot_frt_msg_img = #{botFrtMsgImg}
+		</if>
+		<if test="selBtn != null and selBtn == 'botCstmErrMsg'.toString()">
+			, bot_cstm_err_msg_use_yn = #{botCstmErrMsgUseYn}
+			, bot_cstm_err_msg = #{botCstmErrMsg}
+		</if>		
+		
+		where site_id = #{siteId}
+		 <if test="channel != null">
+		 and channel = #{channel}
+		</if>
+		<if test="departCd != null">
+		 and depart_Cd = #{departCd}
+		</if>	
+	</update>
+
+	<!-- 메세지 설정 정보 조회 -->
+	<select id="selectChatPassTimeList" resultType="CMap">
+		/* setting.selectChatPassTimeList */
+		select mark_num
+			 , pass_time
+			 , pass_time_nm
+			 , img_class_name
+			 , order_seq
+			 , use_yn
+			 , create_dt
+			 , creater
+		from shfda.tb_chat_pass_time
+		order by order_seq
+	</select>
+
+	<!-- 해피봇 정보 조회 -->
+	<select id="selectHappyBot" resultType="CMap">
+		/* setting.selectHappyBot */
+		select 
+			 id
+			,depart_cd
+			,description
+			,fallback_block_id
+			,(select name from shfda.tb_BOT_BLOCK where id=first_block_id) first_block_name			
+			,first_block_id
+			,modified
+			,modifier
+			,name
+			,sort
+			,use_first
+			,use_prev
+			,use_yn		
+		from shfda.tb_BOT_SCENARIO
+		<where>
+			1=1
+			<!-- 
+			<if test="departCd != null">
+				AND depart_cd= #{departCd}
+			</if>
+			 -->
+		</where>
+		order by sort
+	</select>
+	
+	<select id="selectBotBlockList" resultType="CMap">
+		/* setting.selectBotBlockList */
+		select 
+			 id
+			,name	
+		from shfda.tb_bot_block
+		<where>
+			1=1
+			AND use_yn = 'Y' 
+		</where>
+
+	</select>	
+	
+	
+	
+	<!-- 해피봇 등록 -->
+	<insert id="insertHappyBot">
+		/* setting.insertHappyBot */
+		<selectKey keyProperty="id" order="BEFORE" resultType="String">
+			select shfda.seq_BOT_SCENARIO.nextval from dual
+		</selectKey>
+		insert into shfda.tb_BOT_SCENARIO
+		(
+			 ID
+			,DEPART_CD
+			,first_block_id
+			,MODIFIED
+			,MODIFIER
+			,NAME
+			,USE_FIRST
+			,USE_PREV
+			,USE_YN
+			,SORT
+		)
+		values
+		(
+			 #{id}
+			,#{departCd}
+			,#{firstBlockId}
+			<if test="modified != null and modified != '' ">
+				,#{modified}
+			</if>
+			<if test="modified == null or modified == '' ">
+				,SYSDATE
+			</if>			
+			,#{sessionMemberUid}
+			,#{name}
+			,'N'
+			,'N'
+			,#{useYn}	
+			,#{sort}
+		)
+	</insert>		
+	
+	<!-- 해피봇 삭제 -->
+	<delete id="deleteHappyBot">
+		/* setting.deleteHappyBot */
+		delete from shfda.tb_BOT_SCENARIO
+		where
+			1=1
+			<!-- 
+			<if test="departCd != null">
+			and DEPART_CD=#{departCd}
+			</if>
+			 -->
+	</delete>
+
+	<!-- 상담 경과 시간 표시 초기화 -->
+	<update id="updateChatPassTimeInit">
+		/* setting.updateChatPassTimeInit */
+		update shfda.tb_chat_pass_time
+		set use_yn = 'N'
+	</update>
+
+
+	<!-- 상담 경과 시간 표시 변경 -->
+	<update id="updateChatPassTime">
+		/* setting.updateChatPassTime */
+		update shfda.tb_chat_pass_time
+		set use_yn = 'Y'
+		where mark_num in
+		<foreach collection="markNumList" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</update>
+
+	<!-- 욕필터 목록 조회 -->
+	<select id="selectForbiddenList" resultType="CMap">
+		/* setting.selectForbiddenList */
+		select forbidden_num
+			 , forbidden
+			 , del_yn
+			 , to_char(create_dt, 'yyyy-mm-dd') as create_dt
+			 , creater
+			 , to_char(update_dt, 'yyyy-mm-dd') as update_dt
+			 , updater
+		from shfda.tb_forbidden
+		where del_yn = 'N'
+		<if test="forbidden != null">
+			and forbidden = #{forbidden}
+		</if>
+		order by forbidden
+	</select>
+
+	<!-- 욕필터 등록 -->
+	<insert id="insertForbidden">
+		/* setting.insertForbidden */
+		<selectKey keyProperty="forbiddenNum" order="BEFORE" resultType="String">
+			select shfda.seq_FORBIDDEN_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_forbidden
+		(
+		forbidden_num
+		, forbidden
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		)
+		values
+		(
+		#{forbiddenNum}
+		, #{forbidden}
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+	<!-- 욕필터 삭제 -->
+	<update id="deleteForbidden">
+		/* setting.deleteForbidden */
+		update shfda.tb_forbidden
+		set del_yn = 'Y'
+		where forbidden_num = #{forbiddenNum}
+	</update>
+
+	<select id="selectCtgMemberMapping" resultType="CMap">
+		/* setting.selectCtgMemberMapping */
+		select b.*, a.first_yn from shfda.tb_ctg_member_mapping a
+		inner join shfda.tb_member_info b
+		on a.member_uid = b.member_uid
+		<where>
+			<if test="ctgNumList != null">
+				and a.ctg_num in
+				<foreach collection="ctgNumList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		for update wait 5
+	</select>
+
+	<select id="selectCtg" resultType="CMap">
+		/* setting.selectCtg */
+		select * from shfda.tb_ctg_info
+		<where>
+			<if test="ctgNum != null">
+				and ctg_num = #{ctgNum}
+			</if>
+			<if test="ctgNumList != null">
+				and ctg_num in
+				<foreach collection="ctgNumList" item="item" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<if test="ctgDpt != null">
+				and ctg_dpt = #{ctgDpt}
+			</if>
+			<if test="upperCtgNum != null">
+				and upper_ctg_num = #{upperCtgNum}
+			</if>
+			<if test="upperCtgNumList != null">
+				and upper_ctg_num in
+				<foreach collection="upperCtgNumList" item="item" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<if test="dftCtg != null">
+				and dft_ctg_yn = 'Y'
+				and ctg_dpt = (select ctg_mgt_dpt 
+								 from shfda.tb_set 
+								 where 1=1
+								<if test="departCd != null and departCd != ''">
+								    AND depart_cd= #{departCd}
+								</if>									 
+								 	AND site_id = #{siteId})
+								 	AND rownum =1 
+			</if>
+			<if test="delYn != null">
+				and del_yn = #{delYn}
+			</if>
+			<if test="cstmYn != null">
+				and cstm_yn = #{cstmYn}
+			</if>
+			<!-- 채널 값이 있을 경우 채널 조회 조건 추가 -->
+			<if test="cstmLinkDivCd != null">
+				and cstm_link_div_cd = #{cstmLinkDivCd}
+			</if>
+		</where>
+	</select>
+
+	<select id="selectCtgCstm" resultType="CMap">
+		/* setting.selectCtgCstm */
+		select decode(t4.ctg_mgt_dpt, '2', t2.ctg_num, t3.ctg_num)                     as ctg_num
+			 , decode(t4.ctg_mgt_dpt, '2', t2.ctg_nm, t2.ctg_nm || ' > ' || t3.ctg_nm) as ctg_nm
+		from shfda.tb_ctg_info t1
+
+				 inner join shfda.tb_ctg_info t2
+							on t1.ctg_num = t2.upper_ctg_num and t2.del_yn = 'N'
+
+				 left join shfda.tb_ctg_info t3
+						   on t2.ctg_num = t3.upper_ctg_num and t3.del_yn = 'N'
+
+				 inner join (select ctg_mgt_dpt 
+				 			   from shfda.tb_set 
+				 			   where 1=1
+								<if test="departCd != null and departCd != ''">
+								    AND depart_cd= #{departCd}
+								</if>					 			   
+				 			   		AND rownum = 1) t4
+							on 1 = 1
+
+		where t1.ctg_dpt = 1
+		  and t1.del_yn = 'N'
+		  and t1.cstm_yn = 'Y'
+	</select>
+
+	<select id="selectCtgSub" resultType="CMap">
+		/* ssetting.selectCtgSub */
+		select *
+		from shfda.tb_ctg_info start with ctg_num = #{ctgNum}
+			connect by prior ctg_num = upper_ctg_num
+	</select>
+
+	<select id="selectCtgSuper" resultType="CMap">
+		/* setting.selectCtgSuper */
+		select *
+		from shfda.tb_ctg_info start with ctg_num = #{ctgNum}
+			connect by prior upper_ctg_num = ctg_num
+	</select>
+
+	<!-- IPCC_MCH ARS 채널 추가 관련 수정 -->
+ 	<select id="selectSet" resultType="CMap">
+		/* setting.selectSet */
+        SELECT *
+          FROM (
+                SELECT s.site_id                  AS site_id
+                     , s.work_status_cd           AS work_status_cd
+                     , s.cnsr_max_cnt             AS cnsr_max_cnt
+                     , s.auto_mat_use_yn          AS auto_mat_use_yn
+                     , s.self_choi_use_yn         AS self_choi_use_yn
+                     , s.ctg_mapping_use_yn       AS ctg_mapping_use_yn
+                     , s.auto_chng_appr_yn        AS auto_chng_appr_yn
+                     , s.cnsr_once_max_cnt        AS cnsr_once_max_cnt
+                     , s.pwd_term_use_yn          AS pwd_term_use_yn
+                     , s.pwd_term                 AS pwd_term
+                     , s.pass_time_use_yn         AS pass_time_use_yn
+                     , s.ctg_mgt_dpt              AS ctg_mgt_dpt
+                     , s.skin_num                 AS skin_num
+                     , s.license                  AS license
+                     , s.a_chatbot_use_yn         AS a_chatbot_use_yn
+                     , s.a_unsocial_accept_yn     AS a_unsocial_accept_yn
+                     , s.b_chatbot_use_yn         AS b_chatbot_use_yn
+                     , s.b_unsocial_accept_yn     AS b_unsocial_accept_yn
+                     , s.c_chatbot_use_yn         AS c_chatbot_use_yn
+                     , s.c_unsocial_accept_yn     AS c_unsocial_accept_yn
+                     , s.d_chatbot_use_yn         AS d_chatbot_use_yn
+                     , s.d_unsocial_accept_yn     AS d_unsocial_accept_yn
+                     , s.e_chatbot_use_yn         AS e_chatbot_use_yn
+                     , s.e_unsocial_accept_yn     AS e_unsocial_accept_yn
+                     , h.holiday_num              AS holiday_num
+                     , h.holiday_date             AS holiday_date
+                     , h.work_yn                  AS work_yn
+                     , h.start_time               AS start_time
+                     , h.end_time                 AS end_time
+                     , h.memo                     AS memo
+                     , a.channel                  AS channel
+                     , a.cns_frt_msg_text_use_yn  AS cns_frt_msg_text_use_yn
+                     , a.cns_frt_msg              AS cns_frt_msg
+                     , a.cns_frt_msg_img_use_yn   AS cns_frt_msg_img_use_yn
+                     , a.cns_frt_msg_img          AS cns_frt_msg_img
+                     , a.busy_msg_use_yn          AS busy_msg_use_yn
+                     , a.busy_msg                 AS busy_msg
+                     , a.delay_guide_use_yn       AS delay_guide_use_yn
+                     , a.delay_guide_msg          AS delay_guide_msg
+                     , a.delay_guide_time         AS delay_guide_time
+                     , a.delay_stop_use_yn        AS delay_stop_use_yn
+                     , a.delay_stop_msg           AS delay_stop_msg
+                     , a.delay_stop_time          AS delay_stop_time
+                     , a.cnsr_end_msg_use_yn      AS cnsr_end_msg_use_yn
+                     , a.cnsr_end_msg             AS cnsr_end_msg
+                     , a.cstm_end_msg_use_yn      AS cstm_end_msg_use_yn
+                     , a.cstm_end_msg             AS cstm_end_msg
+                     , a.cns_evl_use_yn           AS cns_evl_use_yn
+                     , a.cns_evl_guide_msg        AS cns_evl_guide_msg
+                     , a.unsocial_msg_use_yn      AS unsocial_msg_use_yn
+                     , a.unsocial_msg             AS unsocial_msg
+                     , a.not_cns_msg_use_yn       AS not_cns_msg_use_yn
+                     , a.not_cns_msg              AS not_cns_msg
+                     , a.cns_title                AS cns_title
+                     , a.org_file_nm              AS org_file_nm
+                     , a.depart_cd                AS depart_cd
+                     , a.cns_wait_use_yn          AS cns_wait_use_yn
+                     , a.cns_wait_msg             AS cns_wait_msg
+                     , a.cstm_proh_use_yn         AS cstm_proh_use_yn
+                     , a.cstm_proh_msg            AS cstm_proh_msg
+                     , a.cns_wait_pers_use_yn     AS cns_wait_pers_use_yn
+                     , a.cns_wait_pers_msg        AS cns_wait_pers_msg
+                     , a.cns_wait_cnt             AS cns_wait_cnt
+                     , a.bot_frt_msg_text_use_yn  AS bot_frt_msg_text_use_yn
+                     , a.bot_frt_msg              AS bot_frt_msg
+                     , a.bot_frt_msg_img_use_yn   AS bot_frt_msg_img_use_yn
+                     , a.bot_frt_msg_img          AS bot_frt_msg_img
+                     , a.bot_cstm_err_msg_use_yn  AS bot_cstm_err_msg_use_yn
+                     , a.bot_cstm_err_msg         AS bot_cstm_err_msg
+                     , a.bot_org_file_nm          AS bot_org_file_nm
+                     , a.bot_delay_stop_time      AS bot_delay_stop_time
+                     , a.bot_delay_guide_time     AS bot_delay_guide_time
+                     , b.weekday_start_time       AS weekday_start_time
+                     , b.weekday_end_time         AS weekday_end_time
+                     , b.sat_work_yn              AS sat_work_yn
+                     , b.sat_start_time           AS sat_start_time
+                     , b.sat_end_time             AS sat_end_time
+                     , b.sun_work_yn              AS sun_work_yn
+                     , b.sun_start_time           AS sun_start_time
+                     , b.sun_end_time             AS sun_end_time
+                  FROM shfda.tb_set s
+                  LEFT JOIN shfda.tb_set_msg a
+                    ON a.site_id = s.site_id
+                  LEFT JOIN shfda.tb_set_work_time b
+                    ON b.site_id = a.site_id
+                   AND b.channel = a.channel
+                  LEFT JOIN shfda.tb_holiday_set h
+                    ON h.holiday_date = TO_CHAR(SYSDATE, 'YYYYMMDD')
+               ) a
+         PIVOT (
+                MAX(cns_frt_msg_text_use_yn)  AS cns_frt_msg_text_use_yn
+              , MAX(cns_frt_msg)              AS cns_frt_msg
+              , MAX(cns_frt_msg_img_use_yn)   AS cns_frt_msg_img_use_yn
+              , MAX(cns_frt_msg_img)          AS cns_frt_msg_img
+              , MAX(busy_msg_use_yn)          AS busy_msg_use_yn
+              , MAX(busy_msg)                 AS busy_msg
+              , MAX(delay_guide_use_yn)       AS delay_guide_use_yn
+              , MAX(delay_guide_msg)          AS delay_guide_msg
+              , MAX(delay_guide_time)         AS delay_guide_time
+              , MAX(delay_stop_use_yn)        AS delay_stop_use_yn
+              , MAX(delay_stop_msg)           AS delay_stop_msg
+              , MAX(delay_stop_time)          AS delay_stop_time
+              , MAX(cnsr_end_msg_use_yn)      AS cnsr_end_msg_use_yn
+              , MAX(cnsr_end_msg)             AS cnsr_end_msg
+              , MAX(cstm_end_msg_use_yn)      AS cstm_end_msg_use_yn
+              , MAX(cstm_end_msg)             AS cstm_end_msg
+              , MAX(cns_evl_use_yn)           AS cns_evl_use_yn
+              , MAX(cns_evl_guide_msg)        AS cns_evl_guide_msg
+              , MAX(unsocial_msg_use_yn)      AS unsocial_msg_use_yn
+              , MAX(unsocial_msg)             AS unsocial_msg
+              , MAX(not_cns_msg_use_yn)       AS not_cns_msg_use_yn
+              , MAX(not_cns_msg)              AS not_cns_msg
+              , MAX(cns_title)                AS cns_title
+              , MAX(org_file_nm)              AS org_file_nm
+              , MAX(depart_cd)                AS depart_cd
+              , MAX(cns_wait_use_yn)          AS cns_wait_use_yn
+              , MAX(cns_wait_msg)             AS cns_wait_msg
+              , MAX(cstm_proh_use_yn)         AS cstm_proh_use_yn
+              , MAX(cstm_proh_msg)            AS cstm_proh_msg
+              , MAX(cns_wait_pers_use_yn)     AS cns_wait_pers_use_yn
+              , MAX(cns_wait_pers_msg)        AS cns_wait_pers_msg
+              , MAX(cns_wait_cnt)             AS cns_wait_cnt
+              , MAX(bot_frt_msg_text_use_yn)  AS bot_frt_msg_text_use_yn
+              , MAX(bot_frt_msg)              AS bot_frt_msg
+              , MAX(bot_frt_msg_img_use_yn)   AS bot_frt_msg_img_use_yn
+              , MAX(bot_frt_msg_img)          AS bot_frt_msg_img
+              , MAX(bot_cstm_err_msg_use_yn)  AS bot_cstm_err_msg_use_yn
+              , MAX(bot_cstm_err_msg)         AS bot_cstm_err_msg
+              , MAX(bot_org_file_nm)          AS bot_org_file_nm
+              , MAX(bot_delay_stop_time)      AS bot_delay_stop_time
+              , MAX(bot_delay_guide_time)     AS bot_delay_guide_time
+              , MAX(weekday_start_time)       AS weekday_start_time
+              , MAX(weekday_end_time)         AS weekday_end_time
+              , MAX(sat_work_yn)              AS sat_work_yn
+              , MAX(sat_start_time)           AS sat_start_time
+              , MAX(sat_end_time)             AS sat_end_time
+              , MAX(sun_work_yn)              AS sun_work_yn
+              , MAX(sun_start_time)           AS sun_start_time
+              , MAX(sun_end_time)             AS sun_end_time
+              FOR channel IN ('A' AS "A"
+                            , 'B' AS "B"
+                            , 'C' AS "C"
+                            , 'D' AS "D"
+                            , 'E' AS "E")
+               )
+	</select>
+<!-- IPCC_MCH 기존 쿼리 주석처리 -->
+<!-- 
+ 	<select id="selectSet" resultType="CMap">
+		/* setting.selectSet */
+		select a.*,
+			   bA.*,bB.*,bC.*,bD.*,bE.*,
+			   ca.*,cb.*,cc.*,cd.*,ce.*,
+			   d.*
+		from shfda.tb_set a
+
+				 left join (
+				 	SELECT  
+				 		SITE_ID,
+				 		CNS_FRT_MSG_TEXT_USE_YN				AS	A_CNS_FRT_MSG_TEXT_USE_YN	,
+						CNS_FRT_MSG							AS	A_CNS_FRT_MSG	,
+						CNS_FRT_MSG_IMG_USE_YN				AS	A_CNS_FRT_MSG_IMG_USE_YN	,
+						CNS_FRT_MSG_IMG						AS	A_CNS_FRT_MSG_IMG	,
+						BUSY_MSG_USE_YN						AS	A_BUSY_MSG_USE_YN	,
+						BUSY_MSG							AS	A_BUSY_MSG	,
+						DELAY_GUIDE_USE_YN					AS	A_DELAY_GUIDE_USE_YN	,
+						DELAY_GUIDE_MSG						AS	A_DELAY_GUIDE_MSG	,
+						DELAY_GUIDE_TIME					AS	A_DELAY_GUIDE_TIME	,
+						DELAY_STOP_USE_YN					AS	A_DELAY_STOP_USE_YN	,
+						DELAY_STOP_MSG						AS	A_DELAY_STOP_MSG	,
+						DELAY_STOP_TIME						AS	A_DELAY_STOP_TIME	,
+						CNSR_END_MSG_USE_YN					AS	A_CNSR_END_MSG_USE_YN	,
+						CNSR_END_MSG						AS	A_CNSR_END_MSG	,
+						CSTM_END_MSG_USE_YN					AS	A_CSTM_END_MSG_USE_YN	,
+						CSTM_END_MSG						AS	A_CSTM_END_MSG	,
+						CNS_EVL_USE_YN						AS	A_CNS_EVL_USE_YN	,
+						CNS_EVL_GUIDE_MSG					AS	A_CNS_EVL_GUIDE_MSG	,
+						UNSOCIAL_MSG_USE_YN					AS	A_UNSOCIAL_MSG_USE_YN	,
+						UNSOCIAL_MSG						AS	A_UNSOCIAL_MSG	,
+						NOT_CNS_MSG_USE_YN					AS	A_NOT_CNS_MSG_USE_YN	,
+						NOT_CNS_MSG							AS	A_NOT_CNS_MSG	,
+						CNS_TITLE							AS	CNS_TITLE	,
+						ORG_FILE_NM							AS	A_ORG_FILE_NM	,
+						DEPART_CD							AS	A_DEPART_CD	,
+						CNS_WAIT_USE_YN						AS	A_CNS_WAIT_USE_YN	,
+						CNS_WAIT_MSG	AS	A_CNS_WAIT_MSG	,
+						CSTM_PROH_USE_YN	AS	A_CSTM_PROH_USE_YN	,
+						CSTM_PROH_MSG	AS	A_CSTM_PROH_MSG	,
+						CNS_WAIT_PERS_USE_YN	AS	A_CNS_WAIT_PERS_USE_YN	,
+						CNS_WAIT_PERS_MSG	AS	A_CNS_WAIT_PERS_MSG	,
+						CNS_WAIT_CNT	AS	A_CNS_WAIT_CNT	,
+						BOT_FRT_MSG_TEXT_USE_YN	AS	A_BOT_FRT_MSG_TEXT_USE_YN	,
+						BOT_FRT_MSG	AS	A_BOT_FRT_MSG	,
+						BOT_FRT_MSG_IMG_USE_YN	AS	A_BOT_FRT_MSG_IMG_USE_YN	,
+						BOT_FRT_MSG_IMG	AS	A_BOT_FRT_MSG_IMG	,
+						BOT_CSTM_ERR_MSG_USE_YN	AS	A_BOT_CSTM_ERR_MSG_USE_YN	,
+						BOT_CSTM_ERR_MSG	AS	A_BOT_CSTM_ERR_MSG	,
+						BOT_ORG_FILE_NM	AS	A_BOT_ORG_FILE_NM	,
+						BOT_DELAY_STOP_TIME	AS	A_BOT_DELAY_STOP_TIME	,
+						BOT_DELAY_GUIDE_TIME	AS	A_BOT_DELAY_GUIDE_TIME	
+				 	FROM shfda.tb_set_msg WHERE CHANNEL = 'A') ba
+						   on a.site_id = ba.site_id
+				left join (
+				 	SELECT  
+				 		SITE_ID,
+				 		CNS_FRT_MSG_TEXT_USE_YN	AS	B_CNS_FRT_MSG_TEXT_USE_YN	,
+						CNS_FRT_MSG	AS	B_CNS_FRT_MSG	,
+						CNS_FRT_MSG_IMG_USE_YN	AS	B_CNS_FRT_MSG_IMG_USE_YN	,
+						CNS_FRT_MSG_IMG	AS	B_CNS_FRT_MSG_IMG	,
+						BUSY_MSG_USE_YN	AS	B_BUSY_MSG_USE_YN	,
+						BUSY_MSG	AS	B_BUSY_MSG	,
+						DELAY_GUIDE_USE_YN	AS	B_DELAY_GUIDE_USE_YN	,
+						DELAY_GUIDE_MSG	AS	B_DELAY_GUIDE_MSG	,
+						DELAY_GUIDE_TIME	AS	B_DELAY_GUIDE_TIME	,
+						DELAY_STOP_USE_YN	AS	B_DELAY_STOP_USE_YN	,
+						DELAY_STOP_MSG	AS	B_DELAY_STOP_MSG	,
+						DELAY_STOP_TIME	AS	B_DELAY_STOP_TIME	,
+						CNSR_END_MSG_USE_YN	AS	B_CNSR_END_MSG_USE_YN	,
+						CNSR_END_MSG	AS	B_CNSR_END_MSG	,
+						CSTM_END_MSG_USE_YN	AS	B_CSTM_END_MSG_USE_YN	,
+						CSTM_END_MSG	AS	B_CSTM_END_MSG	,
+						CNS_EVL_USE_YN	AS	B_CNS_EVL_USE_YN	,
+						CNS_EVL_GUIDE_MSG	AS	B_CNS_EVL_GUIDE_MSG	,
+						UNSOCIAL_MSG_USE_YN	AS	B_UNSOCIAL_MSG_USE_YN	,
+						UNSOCIAL_MSG	AS	B_UNSOCIAL_MSG	,
+						NOT_CNS_MSG_USE_YN	AS	B_NOT_CNS_MSG_USE_YN	,
+						NOT_CNS_MSG	AS	B_NOT_CNS_MSG	,
+						ORG_FILE_NM	AS	B_ORG_FILE_NM	,
+						DEPART_CD	AS	B_DEPART_CD	,
+						CNS_WAIT_USE_YN	AS	B_CNS_WAIT_USE_YN	,
+						CNS_WAIT_MSG	AS	B_CNS_WAIT_MSG	,
+						CSTM_PROH_USE_YN	AS	B_CSTM_PROH_USE_YN	,
+						CSTM_PROH_MSG	AS	B_CSTM_PROH_MSG	,
+						CNS_WAIT_PERS_USE_YN	AS	B_CNS_WAIT_PERS_USE_YN	,
+						CNS_WAIT_PERS_MSG	AS	B_CNS_WAIT_PERS_MSG	,
+						CNS_WAIT_CNT	AS	B_CNS_WAIT_CNT	,
+						BOT_FRT_MSG_TEXT_USE_YN	AS	B_BOT_FRT_MSG_TEXT_USE_YN	,
+						BOT_FRT_MSG	AS	B_BOT_FRT_MSG	,
+						BOT_FRT_MSG_IMG_USE_YN	AS	B_BOT_FRT_MSG_IMG_USE_YN	,
+						BOT_FRT_MSG_IMG	AS	B_BOT_FRT_MSG_IMG	,
+						BOT_CSTM_ERR_MSG_USE_YN	AS	B_BOT_CSTM_ERR_MSG_USE_YN	,
+						BOT_CSTM_ERR_MSG	AS	B_BOT_CSTM_ERR_MSG	,
+						BOT_ORG_FILE_NM	AS	B_BOT_ORG_FILE_NM	,
+						BOT_DELAY_STOP_TIME	AS	B_BOT_DELAY_STOP_TIME	,
+						BOT_DELAY_GUIDE_TIME	AS	B_BOT_DELAY_GUIDE_TIME	
+				 	FROM shfda.tb_set_msg WHERE CHANNEL = 'B') bB
+						   on a.site_id = bB.site_id
+				left join (
+				 	SELECT
+				 		SITE_ID,
+				 		CNS_FRT_MSG_TEXT_USE_YN	AS	C_CNS_FRT_MSG_TEXT_USE_YN	,
+						CNS_FRT_MSG	AS	C_CNS_FRT_MSG	,
+						CNS_FRT_MSG_IMG_USE_YN	AS	C_CNS_FRT_MSG_IMG_USE_YN	,
+						CNS_FRT_MSG_IMG	AS	C_CNS_FRT_MSG_IMG	,
+						BUSY_MSG_USE_YN	AS	C_BUSY_MSG_USE_YN	,
+						BUSY_MSG	AS	C_BUSY_MSG	,
+						DELAY_GUIDE_USE_YN	AS	C_DELAY_GUIDE_USE_YN	,
+						DELAY_GUIDE_MSG	AS	C_DELAY_GUIDE_MSG	,
+						DELAY_GUIDE_TIME	AS	C_DELAY_GUIDE_TIME	,
+						DELAY_STOP_USE_YN	AS	C_DELAY_STOP_USE_YN	,
+						DELAY_STOP_MSG	AS	C_DELAY_STOP_MSG	,
+						DELAY_STOP_TIME	AS	C_DELAY_STOP_TIME	,
+						CNSR_END_MSG_USE_YN	AS	C_CNSR_END_MSG_USE_YN	,
+						CNSR_END_MSG	AS	C_CNSR_END_MSG	,
+						CSTM_END_MSG_USE_YN	AS	C_CSTM_END_MSG_USE_YN	,
+						CSTM_END_MSG	AS	C_CSTM_END_MSG	,
+						CNS_EVL_USE_YN	AS	C_CNS_EVL_USE_YN	,
+						CNS_EVL_GUIDE_MSG	AS	C_CNS_EVL_GUIDE_MSG	,
+						UNSOCIAL_MSG_USE_YN	AS	C_UNSOCIAL_MSG_USE_YN	,
+						UNSOCIAL_MSG	AS	C_UNSOCIAL_MSG	,
+						NOT_CNS_MSG_USE_YN	AS	C_NOT_CNS_MSG_USE_YN	,
+						NOT_CNS_MSG	AS	C_NOT_CNS_MSG	,
+						
+						ORG_FILE_NM	AS	C_ORG_FILE_NM	,
+						DEPART_CD	AS	C_DEPART_CD	,
+						CNS_WAIT_USE_YN	AS	C_CNS_WAIT_USE_YN	,
+						CNS_WAIT_MSG	AS	C_CNS_WAIT_MSG	,
+						CSTM_PROH_USE_YN	AS	C_CSTM_PROH_USE_YN	,
+						CSTM_PROH_MSG	AS	C_CSTM_PROH_MSG	,
+						CNS_WAIT_PERS_USE_YN	AS	C_CNS_WAIT_PERS_USE_YN	,
+						CNS_WAIT_PERS_MSG	AS	C_CNS_WAIT_PERS_MSG	,
+						CNS_WAIT_CNT	AS	C_CNS_WAIT_CNT	,
+						BOT_FRT_MSG_TEXT_USE_YN	AS	C_BOT_FRT_MSG_TEXT_USE_YN	,
+						BOT_FRT_MSG	AS	C_BOT_FRT_MSG	,
+						BOT_FRT_MSG_IMG_USE_YN	AS	C_BOT_FRT_MSG_IMG_USE_YN	,
+						BOT_FRT_MSG_IMG	AS	C_BOT_FRT_MSG_IMG	,
+						BOT_CSTM_ERR_MSG_USE_YN	AS	C_BOT_CSTM_ERR_MSG_USE_YN	,
+						BOT_CSTM_ERR_MSG	AS	C_BOT_CSTM_ERR_MSG	,
+						BOT_ORG_FILE_NM	AS	C_BOT_ORG_FILE_NM	,
+						BOT_DELAY_STOP_TIME	AS	C_BOT_DELAY_STOP_TIME	,
+						BOT_DELAY_GUIDE_TIME	AS	C_BOT_DELAY_GUIDE_TIME	
+				 	FROM shfda.tb_set_msg WHERE CHANNEL = 'C') bc
+						   on a.site_id = bc.site_id
+				left join (
+				 	SELECT  
+				 		SITE_ID,
+				 		CNS_FRT_MSG_TEXT_USE_YN	AS	D_CNS_FRT_MSG_TEXT_USE_YN	,
+						CNS_FRT_MSG	AS	D_CNS_FRT_MSG	,
+						CNS_FRT_MSG_IMG_USE_YN	AS	D_CNS_FRT_MSG_IMG_USE_YN	,
+						CNS_FRT_MSG_IMG	AS	D_CNS_FRT_MSG_IMG	,
+						BUSY_MSG_USE_YN	AS	D_BUSY_MSG_USE_YN	,
+						BUSY_MSG	AS	D_BUSY_MSG	,
+						DELAY_GUIDE_USE_YN	AS	D_DELAY_GUIDE_USE_YN	,
+						DELAY_GUIDE_MSG	AS	D_DELAY_GUIDE_MSG	,
+						DELAY_GUIDE_TIME	AS	D_DELAY_GUIDE_TIME	,
+						DELAY_STOP_USE_YN	AS	D_DELAY_STOP_USE_YN	,
+						DELAY_STOP_MSG	AS	D_DELAY_STOP_MSG	,
+						DELAY_STOP_TIME	AS	D_DELAY_STOP_TIME	,
+						CNSR_END_MSG_USE_YN	AS	D_CNSR_END_MSG_USE_YN	,
+						CNSR_END_MSG	AS	D_CNSR_END_MSG	,
+						CSTM_END_MSG_USE_YN	AS	D_CSTM_END_MSG_USE_YN	,
+						CSTM_END_MSG	AS	D_CSTM_END_MSG	,
+						CNS_EVL_USE_YN	AS	D_CNS_EVL_USE_YN	,
+						CNS_EVL_GUIDE_MSG	AS	D_CNS_EVL_GUIDE_MSG	,
+						UNSOCIAL_MSG_USE_YN	AS	D_UNSOCIAL_MSG_USE_YN	,
+						UNSOCIAL_MSG	AS	D_UNSOCIAL_MSG	,
+						NOT_CNS_MSG_USE_YN	AS	D_NOT_CNS_MSG_USE_YN	,
+						NOT_CNS_MSG	AS	D_NOT_CNS_MSG	,
+						ORG_FILE_NM	AS	D_ORG_FILE_NM	,
+						DEPART_CD	AS	D_DEPART_CD	,
+						CNS_WAIT_USE_YN	AS	D_CNS_WAIT_USE_YN	,
+						CNS_WAIT_MSG	AS	D_CNS_WAIT_MSG	,
+						CSTM_PROH_USE_YN	AS	D_CSTM_PROH_USE_YN	,
+						CSTM_PROH_MSG	AS	D_CSTM_PROH_MSG	,
+						CNS_WAIT_PERS_USE_YN	AS	D_CNS_WAIT_PERS_USE_YN	,
+						CNS_WAIT_PERS_MSG	AS	D_CNS_WAIT_PERS_MSG	,
+						CNS_WAIT_CNT	AS	D_CNS_WAIT_CNT	,
+						BOT_FRT_MSG_TEXT_USE_YN	AS	D_BOT_FRT_MSG_TEXT_USE_YN	,
+						BOT_FRT_MSG	AS	D_BOT_FRT_MSG	,
+						BOT_FRT_MSG_IMG_USE_YN	AS	D_BOT_FRT_MSG_IMG_USE_YN	,
+						BOT_FRT_MSG_IMG	AS	D_BOT_FRT_MSG_IMG	,
+						BOT_CSTM_ERR_MSG_USE_YN	AS	D_BOT_CSTM_ERR_MSG_USE_YN	,
+						BOT_CSTM_ERR_MSG	AS	D_BOT_CSTM_ERR_MSG	,
+						BOT_ORG_FILE_NM	AS	D_BOT_ORG_FILE_NM	,
+						BOT_DELAY_STOP_TIME	AS	D_BOT_DELAY_STOP_TIME	,
+						BOT_DELAY_GUIDE_TIME	AS	D_BOT_DELAY_GUIDE_TIME	
+				 	FROM shfda.tb_set_msg WHERE CHANNEL = 'D') bD
+						   on a.site_id = bD.site_id
+                LEFT JOIN (
+                           SELECT site_id                    AS site_id
+                                , cns_frt_msg_text_use_yn    AS e_cns_frt_msg_text_use_yn
+                                , cns_frt_msg                AS e_cns_frt_msg
+                                , cns_frt_msg_img_use_yn     AS e_cns_frt_msg_img_use_yn
+                                , cns_frt_msg_img            AS e_cns_frt_msg_img
+                                , busy_msg_use_yn            AS e_busy_msg_use_yn
+                                , busy_msg                   AS e_busy_msg
+                                , delay_guide_use_yn         AS e_delay_guide_use_yn
+                                , delay_guide_msg            AS e_delay_guide_msg
+                                , delay_guide_time           AS e_delay_guide_time
+                                , delay_stop_use_yn          AS e_delay_stop_use_yn
+                                , delay_stop_msg             AS e_delay_stop_msg
+                                , delay_stop_time            AS e_delay_stop_time
+                                , cnsr_end_msg_use_yn        AS e_cnsr_end_msg_use_yn
+                                , cnsr_end_msg               AS e_cnsr_end_msg
+                                , cstm_end_msg_use_yn        AS e_cstm_end_msg_use_yn
+                                , cstm_end_msg               AS e_cstm_end_msg
+                                , cns_evl_use_yn             AS e_cns_evl_use_yn
+                                , cns_evl_guide_msg          AS e_cns_evl_guide_msg
+                                , unsocial_msg_use_yn        AS e_unsocial_msg_use_yn
+                                , unsocial_msg               AS e_unsocial_msg
+                                , not_cns_msg_use_yn         AS e_not_cns_msg_use_yn
+                                , not_cns_msg                AS e_not_cns_msg
+                                , org_file_nm                AS e_org_file_nm
+                                , depart_cd                  AS e_depart_cd
+                                , cns_wait_use_yn            AS e_cns_wait_use_yn
+                                , cns_wait_msg               AS e_cns_wait_msg
+                                , cstm_proh_use_yn           AS e_cstm_proh_use_yn
+                                , cstm_proh_msg              AS e_cstm_proh_msg
+                                , cns_wait_pers_use_yn       AS e_cns_wait_pers_use_yn
+                                , cns_wait_pers_msg          AS e_cns_wait_pers_msg
+                                , cns_wait_cnt               AS e_cns_wait_cnt
+                                , bot_frt_msg_text_use_yn    AS e_bot_frt_msg_text_use_yn
+                                , bot_frt_msg                AS e_bot_frt_msg
+                                , bot_frt_msg_img_use_yn     AS e_bot_frt_msg_img_use_yn
+                                , bot_frt_msg_img            AS e_bot_frt_msg_img
+                                , bot_cstm_err_msg_use_yn    AS e_bot_cstm_err_msg_use_yn
+                                , bot_cstm_err_msg           AS e_bot_cstm_err_msg
+                                , bot_org_file_nm            AS e_bot_org_file_nm
+                                , bot_delay_stop_time        AS e_bot_delay_stop_time
+                                , bot_delay_guide_time       AS e_bot_delay_guide_time    
+                             FROM shfda.tb_set_msg
+                            WHERE channel = 'E'
+                          ) bE
+                       ON a.site_id = bE.site_id
+				 left join (
+				 			SELECT SITE_ID			,
+							WEEKDAY_START_TIME	as	A_WEEKDAY_START_TIME	,
+							WEEKDAY_END_TIME	as	A_WEEKDAY_END_TIME	,
+							SAT_WORK_YN	as	A_SAT_WORK_YN	,
+							SAT_START_TIME	as	A_SAT_START_TIME	,
+							SAT_END_TIME	as	A_SAT_END_TIME	,
+							SUN_WORK_YN	as	A_SUN_WORK_YN	,
+							SUN_START_TIME	as	A_SUN_START_TIME	,
+							SUN_END_TIME	as	A_SUN_END_TIME	
+							FROM shfda.tb_set_work_time WHERE CHANNEL = 'A') ca
+						   on a.site_id = ca.site_id
+				left join (
+				 			SELECT SITE_ID			,
+							WEEKDAY_START_TIME	as	B_WEEKDAY_START_TIME	,
+							WEEKDAY_END_TIME	as	B_WEEKDAY_END_TIME	,
+							SAT_WORK_YN	as	B_SAT_WORK_YN	,
+							SAT_START_TIME	as	B_SAT_START_TIME	,
+							SAT_END_TIME	as	B_SAT_END_TIME	,
+							SUN_WORK_YN	as	B_SUN_WORK_YN	,
+							SUN_START_TIME	as	B_SUN_START_TIME	,
+							SUN_END_TIME	as	B_SUN_END_TIME	
+							FROM shfda.tb_set_work_time WHERE CHANNEL = 'B') cb
+						   on a.site_id = cb.site_id
+				left join (
+				 			SELECT SITE_ID			,
+							WEEKDAY_START_TIME	as	C_WEEKDAY_START_TIME	,
+							WEEKDAY_END_TIME	as	C_WEEKDAY_END_TIME	,
+							SAT_WORK_YN	as	C_SAT_WORK_YN	,
+							SAT_START_TIME	as	C_SAT_START_TIME	,
+							SAT_END_TIME	as	C_SAT_END_TIME	,
+							SUN_WORK_YN	as	C_SUN_WORK_YN	,
+							SUN_START_TIME	as	C_SUN_START_TIME	,
+							SUN_END_TIME	as	C_SUN_END_TIME	
+							FROM shfda.tb_set_work_time WHERE CHANNEL = 'C') cc
+						   on a.site_id = cc.site_id
+				left join (
+				 			SELECT SITE_ID			,
+							WEEKDAY_START_TIME	as	D_WEEKDAY_START_TIME	,
+							WEEKDAY_END_TIME	as	D_WEEKDAY_END_TIME	,
+							SAT_WORK_YN	as	D_SAT_WORK_YN	,
+							SAT_START_TIME	as	D_SAT_START_TIME	,
+							SAT_END_TIME	as	D_SAT_END_TIME	,
+							SUN_WORK_YN	as	D_SUN_WORK_YN	,
+							SUN_START_TIME	as	D_SUN_START_TIME	,
+							SUN_END_TIME	as	D_SUN_END_TIME	
+							FROM shfda.tb_set_work_time WHERE CHANNEL = 'D') cd
+						   on a.site_id = cd.site_id
+                LEFT JOIN (
+                           SELECT site_id             AS site_id
+                                , weekday_start_time  AS e_weekday_start_time
+                                , weekday_end_time    AS e_weekday_end_time
+                                , sat_work_yn         AS e_sat_work_yn
+                                , sat_start_time      AS e_sat_start_time
+                                , sat_end_time        AS e_sat_end_time
+                                , sun_work_yn         AS e_sun_work_yn
+                                , sun_start_time      AS e_sun_start_time
+                                , sun_end_time        AS e_sun_end_time
+                             FROM shfda.tb_set_work_time
+                            WHERE channel = 'E'
+                          ) ce
+                       ON a.site_id = ce.site_id
+				 left join (select a.*, '${siteId}' as site_id
+							from shfda.tb_holiday_set a
+							where holiday_date = to_char(sysdate, 'YYYYMMDD')) d
+						   on a.site_id = d.site_id
+
+		where 1=1
+		<if test="departCd != null and departCd != ''">
+		    AND depart_cd= #{departCd}
+		</if>			
+			AND a.site_id = #{siteId}
+			AND rownum=1
+	</select>
+-->
+
+	<select id="selectAssignScheduler" resultType="CMap">
+		/* setting.selectAssignScheduler */
+		select * from shfda.tb_assign_sch_job
+		<where>
+			<if test="chatRoomUid">
+				and chat_room_uid = #{chatRoomUid}
+			</if>
+			<if test="ctg_num">
+				and ctg_num = #{ctg_num}
+			</if>
+		</where>
+		order by create_dt
+	</select>
+
+	<select id="selectFirstAssignScheduler" resultType="CMap">
+		/* setting.selectFirstAssignScheduler */
+		select *
+		from (
+				 select *
+				 from shfda.tb_assign_sch_job
+				 order by create_dt
+			 )
+		where rownum = 1
+	</select>
+
+	<update id="saveAssignScheduler">
+		/* setting.saveAssignScheduler */
+		merge into shfda.tb_assign_sch_job
+		using dual
+		on (chat_room_uid = #{chatRoomUid})
+
+		when not matched then
+		insert (
+		chat_room_uid,
+		cstm_uid,
+		ctg_num,
+		create_dt
+		) values (
+		#{chatRoomUid},
+		#{cstmUid},
+		#{ctgNum},
+		sysdate
+		)
+
+		when matched then
+		update
+		<set>
+			<if test="cstmUid != null">
+				cstm_uid = #{cstmUid},
+			</if>
+			<if test="ctgNum != null">
+				ctg_num = #{ctgNum},
+			</if>
+		</set>
+	</update>
+
+	<delete id="deleteAssignScheduler">
+		/* setting.deleteAssignScheduler */
+		delete from shfda.tb_assign_sch_job
+		<where>
+			<if test="chatRoomUid">
+				and chat_room_uid = #{chatRoomUid}
+			</if>
+		</where>
+	</delete>
+
+	<!-- 금지어 목록 -->
+	<select id="selectForbidden" resultType="CMap">
+		/* setting.selectForbidden */
+		select forbidden
+		from shfda.tb_forbidden
+		where del_yn = 'N'
+	</select>
+
+	<!-- 템플릿 키워드 목록 -->
+	<select id="selectHighLight" resultType="CMap">
+		/* setting.selectHighLightList */
+		select distinct b.kwd_nm
+		from shfda.tb_tpl a
+
+		inner join shfda.tb_tpl_kwd b
+		on a.tpl_num = b.tpl_num
+
+		where
+			(
+				a.tpl_div_cd = 'G'
+				<if test="departCd != null">
+				and a.depart_cd = #{departCd}
+				</if>
+			)
+			or
+			(
+				a.tpl_div_cd = 'P'
+				and a.member_uid = #{memberUid}
+			)
+	</select>
+
+	<select id="selectRoomMark" resultType="CMap">
+		/* setting.selectRoomMark */
+		select * from shfda.tb_room_mark
+		<where>
+			<if test="delYn != null">
+				and del_yn = #{delYn}
+			</if>
+		</where>
+	</select>
+
+	<select id="selectCstmGrade" resultType="CMap">
+		/* setting.selectCstmGrade */
+		select * from shfda.tb_cstm_grade
+		<where>
+			<if test="delYn != null">
+				and del_yn = #{delYn}
+			</if>
+		</where>
+	</select>
+
+	<insert id="insertCnsrBreakHis">
+		/* setting.insertCnsrBreakHis */
+		insert into shfda.tb_cnsr_break_his (break_num,
+									   member_uid,
+									   work_status_cd,
+									   create_dt,
+									   creater)
+		values (shfda.seq_break_num.nextval,
+				#{memberUid},
+				#{workStatusCd},
+				sysdate,
+				#{creater})
+	</insert>
+
+	<!-- 근무시작 배치 작동여부 체크 -->
+	<select id="selectWorkStartTime" resultType="CMap">
+		/* setting.selectWorkStartTime */
+		select t.work_yn
+			 , sign(to_date(t.start_time, 'yyyymmddhh24mi') - sysdate)                      as type1
+			 , sign((sysdate + 1 / 24 / 60 * 30) - to_date(t.start_time, 'yyyymmddhh24mi')) as type2
+		from (
+				 select nvl2(t2.work_yn, t2.work_yn,
+							 decode(t3.week, 1, t.sun_work_yn, 7, t.sat_work_yn, 'Y'))     as work_yn
+					  , to_char(sysdate, 'yyyymmdd') || nvl2(t2.work_yn, decode(t2.work_yn, 'Y', t2.start_time, '0000'),
+															 decode(t3.week, 1,
+																	decode(t.sun_work_yn, 'Y', t.sun_start_time, '0000'),
+																	7,
+																	decode(t.sat_work_yn, 'Y', t.sat_start_time, '0000'),
+																	t.weekday_start_time)) as start_time
+				 from shfda.tb_set_work_time t
+						  left outer join (select work_yn, start_time, end_time
+										   from shfda.tb_holiday_set
+										   where holiday_date = to_char(sysdate, 'yyyymmdd')) t2 on (1 = 1)
+						  left outer join (select to_char(to_date(to_char(sysdate, 'yyyymmdd')), 'd') as week
+										   from dual) t3 on (1 = 1)
+				 where rownum = 1
+			 ) t
+	</select>
+
+	<!-- 근무시작 배치 update -->
+	<update id="updateBatchStart">
+		/* setting.updateBatchStart */
+		update shfda.tb_set_cnsr
+		set work_status_cd = 'Y'
+		  , update_dt      = sysdate
+		  , updater        = #{sessionMemberUid}
+	</update>
+	
+	<!-- 채널 코드 리스트 조회 -->
+	<select id="selectChannelList" resultType="CMap">
+		/* setting.selectChannelList */
+		select    cd
+				, cd_nm
+		from shfda.tb_cd 
+		where cd_group = 'CSTM_LINK_DIV_CD'
+		and use_yn = 'Y'
+		<if test="channel != null">
+			and cd = #{channel}
+		</if>
+		order by cd
+	</select>
+	
+</mapper>

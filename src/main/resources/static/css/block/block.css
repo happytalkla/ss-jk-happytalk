@@ -1,0 +1,144 @@
+/* ****************************************************************************
+ * 헤더
+ * **************************************************************************** */
+
+/* ****************************************************************************
+ * 왼쪽, 목록 영역
+ * **************************************************************************** */
+.left-container {
+	width: 350px;
+}
+
+/* ****************************************************************************
+ * 오른쪽, 목록 영역
+ * **************************************************************************** */
+.right-container {
+	width: 300px;
+}
+
+/* ****************************************************************************
+ * 본문 영역
+ * **************************************************************************** */
+.main-container {
+	width: calc(100% - 650px);
+}
+
+#entity-basic-config .dropdown-toggle {
+	border: 1px solid #c2bfc8;
+	background-color: #fff;
+}
+
+#entity-basic-config .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn) {
+	width: auto;
+	margin-right: 20px;
+}
+
+#entity-basic-config .form-control {
+	width: 110px;
+}
+
+#entity-basic-config .label {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+#entity-basic-config .selectpicker {
+	height: 35px;
+	margin-right: 20px;
+}
+
+.condition, .balloon {
+	margin-top: 10px;
+	padding: 30px;
+	border: 1px solid #c2bfc8;
+	border-radius: 3px;
+	background-color: #e8e6ef;
+}
+
+.section.image, .section.text {
+	margin-bottom: 20px;
+}
+
+.balloon .section-list {
+	padding: 0;
+}
+
+.balloon .label {
+	width: 70px;
+	margin: 0;
+}
+
+.balloon .section.image .label,
+.balloon .section.action-list .label {
+	padding-top: 7px;
+}
+
+.balloon .col {
+	width: 623px;
+	padding: 0;
+}
+
+.btn-upload-image, .btn-delete-image {
+	width: 92px;
+	height: 37px;
+	line-height: 35px;
+	margin-right: 10px;
+	margin-bottom: 10px;
+	padding: 0;
+	border: 1px solid #635053;
+	border-radius: 5px;
+	color: #635053;
+	text-align: center;
+	cursor: pointer;
+}
+
+.img-file-name, .btn-create-text {
+	display: inline-block;
+	font-size: 12px;
+	font-weight: normal;
+	color: #888;
+}
+
+.form-control-file {
+	display: none;
+}
+
+.img-viewer {
+	display: block;
+	width: 250px;
+	height: 125px;
+	border: 1px solid #ced4da;
+	border-radius: .25rem;
+}
+
+.section.text textarea {
+	width: 635px;
+	height: 95px;
+	padding: 10px;
+	border-radius: 5px;
+	border: 1px solid #ced4da;
+	resize: none;
+}
+
+.btn-create-action {
+	width: 57px;
+	height: 37px;
+	line-height: 35px;
+	margin-right: 10px;
+	margin-bottom: 10px;
+	padding: 0;
+	border: 1px solid #635053;
+	border-radius: 5px;
+	color: #635053;
+	text-align: center;
+}
+
+.action-list-contents {
+	width: 100%;
+	padding-left: 70px;
+}
+
+/* 종료 분류 */
+#end-category-modal .btn-primary {
+	background-color: #635053;
+}

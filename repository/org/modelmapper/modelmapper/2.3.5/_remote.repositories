@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Mar 10 15:46:52 KST 2022
+modelmapper-2.3.5.jar>central=
+modelmapper-2.3.5-sources.jar>central=
+modelmapper-2.3.5.pom>central=

@@ -1,0 +1,65 @@
+{
+	"version": "2.0",
+	"template": {
+		"outputs": [
+			{
+				"carousel": {
+					"type": "basicCard",
+					"items": [
+						{
+							"description": "2015-02-06 가입 (피보험자 : 임*빈)\r\n월납 16,350원",
+							"buttons": [
+								{
+									"label": "계약내용 상세보기1",
+									"action": "block",
+									"blockId": "5d887f348192ac00010c909d",
+									"extra": {
+										"stockNumber": "1,41516915130000"
+									}
+								}
+							],
+							"title": "[유예] 무배당 파워라이프 통합보험(1501)",
+							"thumbnail": {
+								"imageUrl": "http://localhost:8080/happytalk/images/hk/contract_inquiry_1.png"
+							}
+						},
+						{
+							"description": "2012-12-17 가입 (피보험자 : 임*빈)\r\n월납 69,800원",
+							"buttons": [
+								{
+									"label": "계약내용 상세보기2",
+									"action": "block",
+									"blockId": "5d887f348192ac00010c909d",
+									"extra": {
+										"stockNumber": "2,41207743760000"
+									}
+								}
+							],
+							"title": "[유예] 무배당 행복한 파워라이프 보험(1210)",
+							"thumbnail": {
+								"imageUrl": "http://localhost:8080/happytalk/images/hk/contract_inquiry_2.png"
+							}
+						},
+						{
+							"description": "2012-12-06 가입 (피보험자 : 임*빈)\r\n월납 38,138원",
+							"buttons": [
+								{
+									"label": "계약내용 상세보기3",
+									"action": "block",
+									"blockId": "5d887f348192ac00010c909d",
+									"extra": {
+										"stockNumber": "3,41207714570000"
+									}
+								}
+							],
+							"title": "[유예] 무배당 행복한 파워라이프 보험(1210)",
+							"thumbnail": {
+								"imageUrl": "http://localhost:8080/happytalk/images/hk/contract_inquiry_3.png"
+							}
+						}
+					]
+				}
+			}
+		]
+	}
+}

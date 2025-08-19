@@ -1,0 +1,361 @@
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 100;src: url(/happytalk/fonts/NotoSansKR-Thin.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Thin.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Thin.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Thin.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 300;src: url(/happytalk/fonts/NotoSansKR-Light.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Light.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Light.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Light.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 400;src: url(/happytalk/fonts/NotoSansKR-Regular.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Regular.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Regular.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Regular.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 500;src: url(/happytalk/fonts/NotoSansKR-Medium.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Medium.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Medium.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Medium.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 700;src: url(/happytalk/fonts/NotoSansKR-Bold.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Bold.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Bold.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Bold.otf) format('opentype');}
+@font-face {font-family: 'Noto Sans KR';font-style: normal;font-weight: 900;src: url(/happytalk/fonts/NotoSansKR-Black.ttf) format('turetype'),url(/happytalk/fonts/NotoSansKR-Black.woff2) format('woff2'),url(/happytalk/fonts/NotoSansKR-Black.woff) format('woff'),url(/happytalk/fonts/NotoSansKR-Black.otf) format('opentype');}
+/*������ ���� CSS ����*/
+body{
+	margin: 16px;
+	font-family: 'Noto Sans CJK KR';
+	background-color: #f4f3f7;
+	min-width: 300px;
+	font-weight: 400;
+}
+
+p{
+	padding: 0;
+	margin: 0 0 0 15px;
+	text-indent: -1em;
+	text-align: left;
+}
+a{
+	color:#fff;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+ul{
+	list-style: none;
+}
+/*.divTableRow {margin: 10px 0px;}*/
+div{padding: 0;margin: 0;}
+input[type="text"],input[type="number"],textarea{
+	height:41px;
+	width:100%;
+	font-size: 14px;
+	color:#222;
+    border-color: #a5a5a5;
+	background-color: #fff;
+	border:1px solid #c2bfc8;
+	border-radius: 4px;
+	padding-left:15px;
+	margin: 0;
+}
+input[type="number"]{
+	appearance:none;
+	-webkit-appearance: none; /* ����Ƽ�� ���� ���߱� */ 
+    -moz-appearance: none; 
+}
+input::placeholder{
+	color:#a5a5a5;
+}
+textarea{
+	border:1px solid #c2bfc8;
+	padding:15px;
+	min-height: 113px;
+	font-size: 14px;
+	color:#222 ;
+	font-family: 'Noto Sans CJK KR';
+	resize: vertical;
+}
+
+select { 
+    -webkit-appearance: none; /* ����Ƽ�� ���� ���߱� */ 
+    -moz-appearance: none; 
+     appearance: none;
+     background: url(../images/hk/dropdown.png) no-repeat 95% 50%; /* ȭ��ǥ ����� �̹��� */ 
+     background-size: 20px;
+     background-color : #fff;
+     color:#a5a5a5;
+     border-color: #a5a5a5;
+     padding:.6em;
+     border-radius: 4px;
+
+} 
+
+
+select option::selection {background: black;}
+select::-ms-expand { display: none; } /* IE 10, 11�� ����Ƽ�� ȭ��ǥ ����� */ 
+input,textarea{
+	width:100%;
+	box-sizing: border-box;	
+}
+.radio {overflow:hidden;position:relative;height:26px;box-sizing:border-box;cursor:pointer;}
+.radio input {overflow:hidden;display:none;width:0px;height:0px;border:0 none;font-size:0;line-height:0;clip:rect(0 0 0 0);opacity:0;}
+.radio .radio-txt {display:inline-block;padding-left:10px;font-size:12px;color:#222;}
+.radio .radio-txt18 {display:inline-block;padding-left:10px;font-size:18px;color:#222;line-height:100%;}
+
+.radio .ico  { 
+	display: inline-block;
+	width: 20px; 
+	height: 20px; 
+	background: url(../images/hk/radio1_1.png) left center no-repeat; 
+	vertical-align: top;
+	background-size: 20px;
+}
+.radio input[type=radio] { display:none; }
+.radio input[type=radio]:checked + .ico { background-image: url(../images/hk/radio1.png); }
+
+
+
+.top , .contents {
+	padding:0px 19px;
+	border-left: 2px solid #f55000;
+	border-right: 2px solid #f55000;
+
+}
+.top  {
+	line-height:62px;
+	vertical-align: middle;
+	border-top: 2px solid #f55000;
+	border-left: 2px solid #f55000;
+	border-right: 2px solid #f55000;
+
+}
+.top > img{
+	width:123px;
+	line-height:62px;
+	height: 32px;
+	vertical-align: middle;
+}
+.contents{
+		text-align: center;
+	}
+.contents > div{
+		width:100%;
+	}
+
+.footer, .footer > div{
+	height:22px;
+}
+.point_color {color:#f55000 !important;}
+.bold {font-weight: bold;}
+
+
+
+.title-btn, .btn{
+	padding-bottom: 20px;
+}
+.title-btn > div{
+	font-size: 20px;
+	background-color: #55474a;
+	line-height: 48px;
+}
+.btn > div{
+	font-size: 16px;
+	background-color: #55474a;
+	line-height: 39px;
+	cursor: pointer;
+}
+
+.description{
+	
+	height: auto;
+	vertical-align: bottom;
+	font-size:12px;
+	color:#77747e;
+
+}
+.description p{
+	margin-bottom: 4px;
+
+}
+
+.notap > p{
+	text-indent: 0em;
+	margin: 0;
+}
+
+
+.data-area > .info-box{
+
+	text-align: left;
+	margin:20px 0px 20px 0px;
+	font-weight: 500;
+	font-size: 14px;
+}
+.data-area > .info-box > div{
+	margin-bottom :7px;
+}
+.data-area > .info-box > select{
+	width:100%;
+	height:41px;
+	color:#a5a5a5;
+	font-size:15px;
+}
+
+
+.data-3-align, .data-4-align{width:100%;text-align:center;} 
+.data-3-align input:first-child{float:left;width:calc(33% - 2px);} 
+.data-3-align input:nth-child(2){float:right;width:calc(33% - 2px);}
+.data-3-align input:nth-child(3){margin:0 auto;width:calc(33% - 2px);display:inline-block;} 
+
+
+.data-4-align{
+	height:41px;
+}
+.data-4-align input{float:left;width:calc(25% - 10px);height:41px;} 
+.data-4-align input:nth-child(2){margin:0 6px 0 6px;} 
+.data-4-align input:nth-child(4){margin-left:6px;} 
+.top-txt{
+	font-size:16px;
+	font-weight: 500;
+	color:#222;
+	border-bottom:1px solid #929097;
+	padding-bottom:20px;
+	text-align: left;
+	margin-top:20px;
+}
+.expiration > input {
+	display:inline-block;
+	width:70px;
+}
+.expiration > span{
+	margin: 0;
+	padding:0 10px 0 5px;
+	font-size:14px;
+	font-weight: 500;
+	color:#222;
+}
+
+
+
+/*��� ���� ����*/
+
+.check-item {
+	height:auto;
+}
+.check-item ul{
+
+	padding: 0;
+	margin: 0;
+	text-align:left;
+	font-size:12px;
+	color:#222;
+}
+
+.check-item ul li{
+	padding-bottom:10px;
+	margin: 0;
+}
+.input-phnum{
+	margin:0 0 6px 0 !important;
+}
+
+.input-phnum > .btn{
+	font-size:16px;
+	color:#fff ;
+	background-color: #908b9b;
+	padding-bottom: 0 !important;
+}
+
+
+.data-area > .input-phnum-btn {
+	color:#fff;
+	font-size:16px;
+	font-weight: 500;
+	background-color: #908b9b;
+	padding-bottom:0px;
+	height:39px;
+	cursor: pointer;
+	line-height: 39px;
+	margin-bottom: 10px;
+}
+
+
+.btn_group > label{
+	display:inline-block;
+	width:50%;
+	text-align:center;
+	line-height: 41px;
+	height:41px;
+}
+.btn_group > label:not(:first-child){
+	float:right;
+}
+.labl {
+    display : block;
+}
+.labl > input{
+    visibility: hidden; 
+    position: absolute; 
+    width:10px;
+}
+.labl > input + div{ 
+    cursor:pointer;
+    border-radius: 4px;
+	border: 1px solid #c2bfc8;
+	background-color:#e8e6ef;
+	color:#666;
+	height: 41px;
+	font-size:15px;
+
+}
+.labl > input:checked + div{
+    cursor: pointer;
+    border-radius: 4px;
+	border: 1px solid #55474a;
+	background-color: #fff;
+	color: #55474a;
+	height: 41px;
+}
+
+
+.accident > .title-btn{
+	padding-bottom: 0px;
+}
+
+.accident > .data-area> .info-box >input[type="text"]{
+	color: #929097;
+	border:1px solid #9290097;
+}
+
+
+.accident > .data-area > .description{
+	margin-bottom: 20px;
+}
+.exambox{
+	padding-left:10px;
+	line-height:300%;
+}
+.subquestionbox{
+	padding-left:30px;
+}
+.subexambox{
+	padding-left:40px;
+	line-height:300%;
+}
+.disable{display:none;}
+.alertBox{
+	margin-top : 10px;
+	background-color:#fff;
+	border:1px solid #fff;
+	color:red;font-size:15px;
+	 line-height:200%;
+	 display:none;
+	 border-radius: 4px;
+}
+
+input[type="radio"] {cursor:pointer}
+input[type="radio"].radio_18 {
+    display:none;
+}
+input[type="radio"].radio_18 + label {
+    color:#555555;
+	cursor:pointer
+}
+input[type="radio"].radio_18 + label span {
+    display:inline-block;
+    width:18px;
+    height:18px;
+    margin:0 8px -5px 0;
+    background:url("../images/admin/radio_img01.png") left 0 no-repeat;
+    cursor:pointer;
+}
+input[type="radio"].radio_18.no_text + label span {
+    margin:0 0 -5px 0;
+}
+input[type="radio"].radio_18:checked + label span {
+    background:url("../images/admin/radio_img01.png") right 0 no-repeat
+}

@@ -1,0 +1,829 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manage">
+
+	<!-- 등록된 휴일 목록 조회 -->
+	<select id="selectHolidayList" resultType="CMap">
+		/* manage.selectHolidayList */
+		select holiday_num
+			 , holiday_date
+			 , to_char(to_date(holiday_date, 'yyyymmdd'), 'yyyymmdd') as holiday
+			 , work_yn
+			 , start_time
+			 , end_time
+			 , memo
+			 , to_char(create_dt, 'YYYY-MM-DD')                         as create_dt
+			 , creater
+		from shfda.tb_holiday_set
+		where holiday_date between #{year} || '0101' and #{year} || '1231'
+		order by holiday_date
+	</select>
+
+	<!-- 해당월의 등록된 휴일 목록 조회 -->
+	<select id="selectHolidayMonthList" resultType="CMap">
+		/* manage.selectHolidayMonthList */
+		select holiday_num
+			 , holiday_date
+			 , to_char(to_date(holiday_date, 'yyyymmdd'), 'yyyy-mm-dd') as holiday
+			 , to_char(to_date(holiday_date, 'yyyymmdd'), 'dd')         as day
+			 , work_yn
+			 , start_time
+			 , end_time
+			 , memo
+			 , to_char(create_dt, 'YYYY-MM-DD')                         as create_dt
+			 , creater
+		from shfda.tb_holiday_set
+		where holiday_date between #{yearMonth} || '01' and #{yearMonth} || '31'
+		order by holiday_date
+	</select>
+
+
+	<!-- 등록된 휴일 조회 -->
+	<select id="selectHoliday" resultType="CMap">
+		/* manage.selectHoliday */
+		select holiday_num
+			 , holiday_date
+			 , work_yn
+			 , start_time
+			 , end_time
+			 , memo
+			 , to_char(create_dt, 'YYYY-MM-DD') as create_dt
+			 , creater
+		from shfda.tb_holiday_set
+		where holiday_date = replace(#{holidayDate}, '-', '')
+	</select>
+
+
+	<!-- 휴일 삭제 -->
+	<delete id="deleteHoliday">
+		/* manage.deleteHoliday */
+		delete shfda.tb_holiday_set
+		where holiday_date in
+		<foreach collection="delHolidayDateList" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</delete>
+
+
+	<!-- 휴일 등록 -->
+	<insert id="insertHoliday">
+		/* manage.insertHoliday */
+		<selectKey keyProperty="holidayNum" order="BEFORE" resultType="String">
+			select shfda.seq_HOLIDAY_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_holiday_set
+		(
+		holiday_num
+		, holiday_date
+		, work_yn
+		, start_time
+		, end_time
+		, memo
+		, create_dt
+		, creater
+		)
+		values
+		(
+		#{holidayNum}
+		, replace(#{holidayDate}, '-', '')
+		, #{workYn}
+		, #{startTime}
+		, #{endTime}
+		, #{memo}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+
+	<!-- 월 달력 -->
+	<select id="selectMonthCalendar" resultType="CMap">
+		/* manage.selectMonthCalendar */
+		SELECT sun, mon, tue, wed, thu, fri, sat
+		FROM (
+				 SELECT TRUNC(dt + LEVEL - 1, 'd')    w
+					  , TO_CHAR(dt + LEVEL - 1, 'd')  d
+					  , TO_CHAR(dt + LEVEL - 1, 'dd') dd
+				 FROM (SELECT TO_DATE(#{yearMonth}, 'yyyymm') dt FROM dual) CONNECT BY LEVEL <![CDATA[<=]]> LAST_DAY(dt) - dt + 1
+			 ) PIVOT (MIN(dd) FOR d IN (1 sun, 2 mon, 3 tue, 4 wed, 5 thu, 6 fri, 7 sat))
+		ORDER BY w
+	</select>
+
+	<!-- 월 스케줄 목록 조회 -->
+	<select id="selectMonthSchList" resultType="CMap">
+		/* manage.selectMonthSchList */
+		select t.sel_day
+		, t.channel as channel
+		, max(t.sel_date) as sel_date
+		, max(t.sel_dt) as sel_dt
+		, sum(nvl2(t.cns_possible_yn, decode(t.cns_possible_yn, 'Y', 1, 0), 0)) as cns_possible_cnt
+		, sum(nvl2(t.cns_possible_yn, decode(t.cns_possible_yn, 'Y', 0, 1), 0)) as cns_not_cnt
+		, min(t.start_time) as start_time
+		, max(t.end_time) as end_time
+		, max(t.sch_yn) as sch_yn
+		
+		from
+		(
+		select t1.sel_day, t1.sel_date, to_char(to_date(t1.sel_date, 'yyyymmdd'), 'yyyy-mm-dd') as sel_dt
+		, t2.cns_possible_yn
+		, t2.start_time
+		, t2.end_time
+		, nvl2(t2.sch_date, 'Y', 'N') as sch_yn
+		, t2.channel
+		from
+		(
+		select to_char(dt + level - 1, 'dd') sel_day
+		, to_char(dt + level - 1, 'yyyymmdd') sel_date
+		from (select to_date(concat(#{schYear},#{schMonth}),'yyyymm') dt from dual)
+		connect by level <![CDATA[<=]]> last_day(dt) - dt + 1
+		) t1
+		left outer join
+		(
+		select t1.sch_date, t1.cns_possible_yn, t1.start_time, t1.end_time, t1.channel
+		from shfda.tb_sch_cnsr t1, shfda.tb_member_info t2
+		where t1.member_uid = t2.member_uid
+		<if test="memberDivCd != null and memberDivCd eq 'M'.toString() ">
+			and (t2.upper_member_uid = #{sessionMemberUid} or t2.member_uid = #{sessionMemberUid})
+		</if>
+		<if test="departCd != null and !''.toString().equals(departCd.toString())">
+			and depart_cd = #{departCd}
+		</if>
+		and t1.sch_month = #{schYear}||#{schMonth}
+		/*and t2.member_div_cd in ('M', 'C')*/
+		and t1.channel = #{channel}
+		and t2.cns_possible_yn = 'Y'
+		and t2.valid_yn = 'Y'
+		and t2.leave_yn = 'N'
+		) t2 on (t1.sel_date = t2.sch_date)
+		) t
+		group by t.sel_day, t.channel
+		order by t.sel_day, t.channel
+	</select>
+
+	<!-- 매니저의 상담원 목록 -->
+	<select id="selectCounselorHoliday" resultType="CMap">
+	/* manage.selectCounselorHoliday */
+	select * from (
+		select
+			'A' member_uid
+			, '선택적용' name
+			, '' id
+			, 'Z' member_div_cd
+			, '' member_div_nm
+			, '' manager_uid
+			, '' manager_name
+			, t.work_yn as cns_possible_yn
+			, substr(replace(#{schDate}, '-', ''), 1, 6) as sch_date
+			, t.start_time
+			, t.end_time
+			, substr(t.start_time, 1,2) as start_time1
+			, substr(t.start_time, 3,2) as start_time2
+			, substr(t.end_time, 1,2) as end_time1
+			, substr(t.end_time, 3,2) as end_time2
+			, 'X' work_status_cd
+		from (
+			select
+				decode(to_char(to_date(substr(replace(#{schDate}, '-', ''), 1, 8), 'yyyymmdd'), 'd')
+					, 1, sun_work_yn
+					, 7, sat_work_yn
+					, 'Y'
+				) as work_yn
+				, decode(to_char(to_date(substr(replace(#{schDate}, '-', ''), 1, 8), 'yyyymmdd'), 'd')
+					, 1, sun_start_time
+					, 7, sat_start_time
+					, weekday_start_time
+				) as start_time
+				, decode(to_char(to_date(substr(replace(${schDate}, '-', ''), 1, 8), 'yyyymmdd'), 'd')
+					, 1, sun_end_time
+					, 7, sat_end_time
+					, weekday_end_time
+				) as end_time
+			from shfda.tb_set_work_time
+			where rownum = 1
+			<if test="channel != null and channel != ''">
+			and channel = #{channel}
+			</if>
+		) t
+
+		union all
+
+		select
+			t1.member_uid
+			, t1.name
+			, t1.id
+			, t1.member_div_cd
+			, shfda.fn_getcodenm('MEMBER_DIV_CD', t1.member_div_cd) as member_div_nm
+			, t2.member_uid as manager_uid
+			, nvl(t2.name, '-') as manager_name
+			, t3.cns_possible_yn
+			, t3.sch_date
+			, t3.start_time
+			, t3.end_time
+			, substr(t3.start_time, 1,2) as start_time1
+			, substr(t3.start_time, 3,2) as start_time2
+			, substr(t3.end_time, 1,2) as end_time1
+			, substr(t3.end_time, 3,2) as end_time2
+			, nvl(t4.work_status_cd, 'R') as work_status_cd
+
+		from shfda.tb_member_info t1
+
+		left outer join shfda.tb_member_info t2
+		on t1.upper_member_uid = t2.member_uid
+
+		left outer join shfda.tb_set_cnsr t4
+		on t1.member_uid = t4.member_uid
+
+		inner join shfda.tb_sch_cnsr t3
+		on t1.member_uid = t3.member_uid
+
+		where
+			/* t1.member_div_cd in ('M', 'C') and */ 
+			t1.cns_possible_yn = 'Y'
+			<if test="departCd != null and !''.toString().equals(departCd.toString())">
+			and t1.depart_cd = #{departCd}
+			</if>
+			<if test="channel != null and channel != ''">
+			and t3.channel = #{channel}
+			</if>
+			and t1.valid_yn = 'Y'
+			and t1.leave_yn = 'N'
+			<if test="memberDivCd != null and memberDivCd eq 'M'.toString() ">
+			and (t1.upper_member_uid = #{sessionMemberUid} or t1.member_uid = #{sessionMemberUid})
+			</if>
+			and t3.sch_date = #{schDate}
+	)
+	order by member_div_cd desc, manager_name asc, name asc, cns_possible_yn desc
+	</select>
+
+	<!-- 매니저의 상담원 목록 (상담최대건수) -->
+	<select id="selectChatCntSetting" resultType="CMap">
+		/* manage.selectChatCntSetting */
+		select * from (
+			select 
+				'A' member_uid
+				, '선택적용' name
+				, '' id
+				, 'Z' member_div_cd
+				, '' member_div_nm
+				, '' manager_uid
+				, '' manager_name
+				, 'Y' cns_possible_yn
+				, 0 cnsr_max_cnt
+			from dual
+
+			union all
+
+			select t1.member_uid
+				, t1.name
+				, t1.id
+				, t1.member_div_cd
+				, shfda.fn_getcodenm('MEMBER_DIV_CD', t1.member_div_cd) as member_div_nm
+				, t2.member_uid as manager_uid
+				, nvl(t2.name, '-') as manager_name
+				, t1.cns_possible_yn
+				, t1.cnsr_max_cnt
+			from shfda.tb_member_info t1
+
+			left outer join shfda.tb_member_info t2
+			on t1.upper_member_uid = t2.member_uid
+
+			where
+				t1.cns_possible_yn = 'Y'
+				and t1.valid_yn = 'Y'
+				and t1.leave_yn = 'N'
+				<if test="memberDivCd != null and memberDivCd eq 'M'.toString() ">
+				and (t1.upper_member_uid = #{sessionMemberUid} or t1.member_uid = #{sessionMemberUid})
+				</if>
+		)
+		order by member_div_cd desc, cns_possible_yn desc, name asc
+	</select>	
+
+	<!-- 해당일의 근무 여부 -->
+	<select id="selectWorkYnCheck" resultType="CMap">
+		/* manage.selectWorkYnCheck */
+		select
+			nvl2(t2.work_yn
+				, t2.work_yn
+				, decode(t3.week
+					, 1, t.sun_work_yn
+					, 7, t.sat_work_yn
+					, 'Y')
+			) as work_yn
+
+			, nvl2(t2.work_yn
+				, decode(t2.work_yn
+					, 'Y', t2.start_time
+					, '0000')
+				, decode(t3.week
+					, 1, decode(t.sun_work_yn
+						, 'Y', t.sun_start_time
+						, '0000')
+					, 7, decode(t.sat_work_yn
+						, 'Y', t.sat_start_time
+						, '0000')
+					, t.weekday_start_time
+				)
+			) as start_time
+
+			, nvl2(t2.work_yn
+				, decode(t2.work_yn
+					, 'Y', t2.end_time
+					, '0000')
+				, decode(t3.week
+					, 1, decode(t.sun_work_yn
+						, 'Y', t.sun_end_time
+						, '0000')
+					, 7, decode(t.sat_work_yn
+						, 'Y', t.sat_end_time
+						, '0000')
+					, t.weekday_end_time
+				)
+			) as end_time
+			<choose>
+				<when test='cstmLinkDivCd != null and cstmLinkDivCd != "B" '>
+					, t4.b_unsocial_accept_yn as unsocial_accept_yn
+				</when>
+				<when test='cstmLinkDivCd != null and cstmLinkDivCd != "C" '>
+					, t4.c_unsocial_accept_yn as unsocial_accept_yn
+				</when>
+				<when test='cstmLinkDivCd != null and cstmLinkDivCd != "D" '>
+					, t4.d_unsocial_accept_yn as unsocial_accept_yn
+				</when>
+				<otherwise>
+				, t4.unsocial_accept_yn	 as unsocial_accept_yn			
+				</otherwise>
+			</choose>
+
+			from shfda.tb_set_work_time t
+
+				left outer join (
+					select work_yn, start_time, end_time
+					from shfda.tb_holiday_set
+					where holiday_date = #{schDate}
+				) t2	on 1 = 1
+	
+				left outer join (
+					select to_char(to_date(#{schDate}, 'yyyymmdd'), 'd') as week from dual
+				) t3		on 1 = 1
+	
+				left outer join (
+					select * from shfda.tb_set
+					where rownum = 1
+				) t4		on 1 = 1
+
+		where
+			<if test='cstmLinkDivCd != null and cstmLinkDivCd != "" '>
+			t.channel = #{cstmLinkDivCd}
+			</if>
+	</select>
+	
+	<!-- 스케줄 등록 -->
+	<insert id="insertSchedule">
+	/* manage.insertSchedule */
+	insert into shfda.tb_sch_cnsr
+	(
+		sch_date
+		, member_uid
+		, sch_month
+		, cns_possible_yn
+		, start_time
+		, end_time
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, channel)
+	(
+	select
+		t1.sch_date
+		, t2.member_uid
+		, #{schYear} || #{schMonth}
+		, decode(t4.work_yn
+			, 'N', 'N'
+			, decode(t1.week
+				, 1, t3.sun_work_yn
+				, 7, t3.sat_work_yn
+				, 'Y'
+			)
+		) as cns_possible_yn
+		, nvl2(t4.work_yn
+			, decode(t4.work_yn, 'Y', t4.start_time, '0000')
+			, decode(t1.week
+				, 1, decode(t3.sun_work_yn, 'Y', t3.sun_start_time, '0000')
+				, 7, decode(t3.sat_work_yn, 'Y', t3.sat_start_time, '0000')
+				, t3.weekday_start_time)
+		) as start_time
+		, nvl2(t4.work_yn
+			, decode(t4.work_yn, 'Y', t4.end_time, '0000')
+			, decode(t1.week
+				, 1, decode(t3.sun_work_yn, 'Y', t3.sun_end_time, '0000')
+				, 7, decode(t3.sat_work_yn, 'Y', t3.sat_end_time, '0000')
+				, t3.weekday_end_time)
+		) as end_time
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, #{channel}
+	from (
+		<!-- 오늘 이후 이번달 전체 일과 요일 -->
+		select t.*
+		from (
+			select
+				to_char(dt + level - 1, 'yyyymmdd') sch_date
+				, to_char(dt + level - 1, 'd') as week
+			from (select to_date(#{schYear} || #{schMonth}, 'yyyymm') dt from dual)
+			connect by level &lt;= last_day(dt) - dt + 1
+		) t
+		where t.sch_date &gt;= to_char(sysdate, 'yyyymmdd')
+	) t1,
+	(
+		SELECT 
+			tmi.MEMBER_UID AS member_uid
+		FROM shfda.tb_MEMBER_INFO tmi 
+			, (
+			SELECT tcmm.member_uid FROM 
+				shfda.tb_CTG_MEMBER_MAPPING tcmm
+				, shfda.tb_CTG_INFO tci
+			WHERE tcmm.CTG_NUM = tci.CTG_NUM
+			<if test="channel != null and channel != ''">
+			AND tci.CSTM_LINK_DIV_CD = #{channel}
+			</if>
+			) tcgm
+		WHERE tmi.MEMBER_UID = tcgm.member_uid
+			AND tmi.cns_possible_yn = 'Y'
+		and tmi.valid_yn = 'Y'
+		and tmi.leave_yn = 'N'
+	) t2,
+	/* 전체부서 */
+	(
+		select
+			t.weekday_start_time,
+			t.weekday_end_time,
+			t.sat_work_yn,
+			t.sat_start_time,
+			t.sat_end_time,
+			t.sun_work_yn,
+			t.sun_start_time,
+			t.sun_end_time
+		from shfda.tb_set_work_time t
+		where rownum = 1
+			<if test="channel != null and channel != ''">
+			and t.channel = #{channel}
+			</if>
+	) t3,
+	(
+		select holiday_date, work_yn, start_time, end_time
+		from shfda.tb_holiday_set
+		where holiday_date like #{schYear} || #{schMonth} || '%'
+	) t4
+	where
+		(t1.sch_date, t2.member_uid) not in
+	 		(
+	 			select sch_date, member_uid from shfda.tb_sch_cnsr 
+	 			where sch_month = #{schYear} || #{schMonth} 
+	 			<if test="channel != null and channel != ''">
+				and channel = #{channel}
+				</if>
+	 		)
+		and t1.sch_date = t4.holiday_date(+)
+	)
+	</insert>
+
+	<!-- 휴일 등록 일자의 스케줄 등록 -->
+	<insert id="insertHolidaySchedule">
+	/* manage.insertHolidaySchedule */
+	insert into shfda.tb_sch_cnsr
+	(
+		sch_date
+		, member_uid
+		, sch_month
+		, cns_possible_yn
+		, start_time
+		, end_time
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		, channel)
+	(
+	select
+		replace(#{holidayDate}, '-', '')
+		, t2.member_uid
+		, substr(replace(#{holidayDate}, '-', ''), 1, 6)
+		, decode(t4.work_yn
+			, 'N', 'N'
+			, decode(t1.week
+				, 1, t3.sun_work_yn
+				, 7, t3.sat_work_yn
+				, 'Y'
+			)
+		) as cns_possible_yn
+		, nvl2(t4.work_yn
+			, decode(t4.work_yn, 'Y', t4.start_time, '0000')
+			, decode(t1.week
+				, 1, decode(t3.sun_work_yn, 'Y', t3.sun_start_time, '0000')
+				, 7, decode(t3.sat_work_yn, 'Y', t3.sat_start_time, '0000')
+				, t3.weekday_start_time)
+		) as start_time
+		, nvl2(t4.work_yn
+			, decode(t4.work_yn, 'Y', t4.end_time, '0000')
+			, decode(t1.week
+				, 1, decode(t3.sun_work_yn, 'Y', t3.sun_end_time, '0000')
+				, 7, decode(t3.sat_work_yn, 'Y', t3.sat_end_time, '0000')
+				, t3.weekday_end_time)
+		) as end_time
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		, #{channel}
+	from (
+		select
+			replace(#{holidayDate}, '-', '') as sch_date
+			, to_char(to_date(replace(#{holidayDate}, '-', ''), 'yyyymmdd'), 'd') as week
+		from dual
+	) t1,
+	(
+		select
+			member_uid
+		from shfda.tb_member_info
+		where
+			cns_possible_yn = 'Y'
+			and valid_yn = 'Y'
+			and leave_yn = 'N'
+			<if test="departCd != null and departCd != ''">
+			and depart_cd #{departCd}
+			</if>
+	) t2,
+	(
+		select
+			t.weekday_start_time
+			, t.weekday_end_time
+			, t.sat_work_yn
+			, t.sat_start_time
+			, t.sat_end_time
+			, t.sun_work_yn
+			, t.sun_start_time
+			, t.sun_end_time
+		from shfda.tb_set_work_time t
+		where rownum = 1
+	) t3,
+	(
+		select
+			holiday_date, work_yn, start_time, end_time
+		from shfda.tb_holiday_set
+		where holiday_date = replace(#{holidayDate}, '-', '')
+	) t4
+	where
+		(t1.sch_date, t2.member_uid) not in
+			(select sch_date, member_uid from shfda.tb_sch_cnsr where sch_date = replace(#{holidayDate}, '-', ''))
+		and t1.sch_date = t4.holiday_date(+)
+	)
+	</insert>
+
+	<!-- 스케줄 삭제 -->
+	<delete id="deleteSchedule">
+		/* manage.deleteSchedule */
+		delete from shfda.tb_sch_cnsr
+		where
+			sch_month = #{schYear} || #{schMonth}
+			and sch_date &gt; to_char(sysdate, 'yyyymmdd')
+			<!-- IPCC_MCH 채널 관련 조건 누락에 따른 추가 -->
+			<if test="channel != null and channel != ''">
+			and channel = #{channel}
+			</if>
+			<if test="departCd != null and departCd != ''">
+			and member_uid in (
+				select member_uid
+				from shfda.tb_member_info
+				where depart_cd = #{departCd}
+			)
+			</if>
+	</delete>
+
+	<!-- 오늘 이후 스케줄 삭제 -->
+	<delete id="deleteAllSchedule">
+		/* manage.deleteAllSchedule */
+		delete from shfda.tb_sch_cnsr
+		where
+			sch_date &gt; to_char(sysdate, 'yyyymmdd')
+	</delete>
+
+	<!-- 휴일 등록일의 스케줄 삭제 -->
+	<delete id="deleteHolidaySchedule">
+		/* manage.deleteHolidaySchedule */
+		delete from shfda.tb_sch_cnsr
+		where
+			sch_date = replace(#{holidayDate}, '-', '')
+	</delete>
+
+	<!-- 상담원 휴일 설정 변경 - 근무여부 -->
+	<update id="updateCnsrHolidayWorkYn">
+		/* manage.updateCnsrHolidayWorkYn */
+		update shfda.tb_sch_cnsr
+		set
+			cns_possible_yn = #{cnsPossibleYn}
+			, update_dt = sysdate
+			, updater = #{sessionMemberUid}
+		where
+			member_uid = #{memberUid}
+			and sch_date = #{schDate}
+	</update>
+
+	<!-- 상담원 휴일 설정 변경 - 근무시간 -->
+	<update id="updateCnsrHolidayTime">
+		/* manage.updateCnsrHolidayTime */
+		update shfda.tb_sch_cnsr
+		set
+			start_time = #{startTime}
+			, end_time = #{endTime}
+			, update_dt = sysdate
+			, updater = #{sessionMemberUid}
+		where
+			member_uid = #{memberUid}
+			and sch_date = #{schDate}
+	</update>
+
+	<!-- 개별 상담수 변경 -->
+	<update id="updateChatCntSetting">
+		/* manage.updateChatCntSetting */
+		update shfda.tb_member_info
+		set
+			member_uid = #{memberUid}
+			, cnsr_max_cnt = #{cnsrMaxCnt}
+			, update_dt = sysdate
+			, updater = #{sessionMemberUid}
+		where
+			member_uid = #{memberUid}
+	</update>
+
+	<!-- 코끼리 등록 목록 조회 -->
+	<select id="selectCstmGradeList" resultType="CMap">
+		/* manage.selectCstmGradeList */
+		select t.*
+		from
+		(
+		select
+		nvl(a.coc_id, nvl(a.name, a.cstm_uid)) as view_id
+		, a.cstm_uid
+		, a.coc_id
+		, a.link_ip
+		, a.grade_num
+		, a.grade_memo
+		, a.grade_reg_member_uid
+		, to_char(a.grade_reg_dt, 'yyyy-mm-dd hh24:mi:ss') as grade_reg_dt
+		, a.cstm_div_cd
+		, a.login_yn
+		, a.name as cstm_nm
+		, a.create_dt
+		, a.creater
+		, a.update_dt
+		, a.updater
+		, b.name as member_nm
+		, b.member_div_cd
+		, c.grade_nm
+		, c.grade_desc
+		, c.img_class_name
+		, count(a.cstm_uid) over() as tot_count
+		, row_number() over(order by a.grade_reg_dt desc) as rnum
+		from shfda.tb_chat_cstm_info a
+		inner join shfda.tb_member_info b on (a.grade_reg_member_uid = b.member_uid)
+		inner join shfda.tb_cstm_grade c on (a.grade_num = c.grade_num)
+		<if test="schText != null and schText != ''.toString()">
+			<choose>
+				<when test="schType != null and schType == 'CSTM'.toString()">
+					where instr(a.name, #{schText}, 1, 1) > 0
+				</when>
+				<when test="schType != null and schType == 'CNSR'.toString()">
+					where instr(b.name, #{schText}, 1, 1) > 0
+				</when>
+			</choose>
+		</if>
+		) t
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+	</select>
+
+	<!-- 코끼리 관리 조회 - 고객 1건 -->
+	<select id="selectCstmGrade" resultType="CMap">
+		/* manage.selectCstmGrade */
+		select a.cstm_uid
+			 , a.coc_id
+			 , a.link_ip
+			 , a.grade_num
+			 , a.grade_memo
+			 , a.grade_reg_member_uid
+			 , to_char(a.grade_reg_dt, 'yyyy-mm-dd hh24:mi:ss') as grade_reg_dt
+			 , a.cstm_div_cd
+			 , shfda.fn_GETCODENM('CSTM_DIV_CD', a.cstm_div_cd) as cstm_div_nm
+			 , a.login_yn
+			 , a.name as cstm_nm
+			 , a.create_dt
+			 , a.creater
+			 , a.update_dt
+			 , a.updater
+			 , b.name as member_nm
+			 , b.member_div_cd
+			 , shfda.fn_GETCODENM('MEMBER_DIV_CD', b.member_div_cd) as member_div_nm
+			 , c.grade_nm
+			 , c.grade_desc
+			 , c.img_class_name
+		from shfda.tb_chat_cstm_info a
+				 inner join shfda.tb_member_info b on (a.grade_reg_member_uid = b.member_uid)
+				 inner join shfda.tb_cstm_grade c on (a.grade_num = c.grade_num)
+		where a.cstm_uid = #{cstmUid}
+	</select>
+
+	<!-- 고객 등급 관리 수정 -->
+	<update id="updateUserGrade">
+		/* manage.updateUserGrade */
+		update shfda.tb_chat_cstm_info
+		set grade_memo = #{gradeMemo}
+		  , update_dt  = sysdate
+		  , updater    = #{sessionMemberUid}
+		where cstm_uid = #{cstmUid}
+	</update>
+
+	<!-- 고객 등급 관리 삭제 -->
+	<update id="deleteUserGrade">
+		/* manage.deleteUserGrade */
+		update shfda.tb_chat_cstm_info
+		set grade_num            = ''
+		  , grade_memo           = ''
+		  , grade_reg_member_uid = ''
+		  , grade_reg_dt         = null
+		  , update_dt            = sysdate
+		  , updater              = #{sessionMemberUid}
+		where cstm_uid = #{cstmUid}
+	</update>
+
+	<!-- 고객사 아이디 업데이트 -->
+	<update id="updateUserCocId">
+		/* manage.updateUserCocId */
+		update shfda.tb_chat_cstm_info
+		set 
+			coc_id = #{coc_id}, 
+			name = #{name}, 
+			birth_date = #{birth_date},
+			coc_type_nm = #{vip_cust_yn}
+		where cstm_link_div_cd = #{cstm_link_div_cd}
+		and cstm_link_customer_uid = #{cstm_link_customer_uid}
+	</update>
+	
+	<!-- 고객사 아이디 룸 업데이트 -->
+	<update id="updateRoomCocId">
+		/* manage.updateRoomCocId */
+		update shfda.tb_chat_room
+		set 
+			coc_id = #{coc_id},
+			auth_type = (
+				SELECT auth_type FROM (
+					SELECT c.auth_type AS auth_type
+					FROM
+						shfda.tb_certification c
+					WHERE
+						c.channel = #{cstm_link_div_cd}
+						AND c.uuid = #{cstm_link_customer_uid}
+						AND rownum = 1
+				)
+			),
+			auth_position = (
+				SELECT auth_position FROM (
+					SELECT c.auth_position AS auth_position
+					FROM
+						shfda.tb_certification c
+					WHERE
+						c.channel = #{cstm_link_div_cd}
+						AND c.uuid = #{cstm_link_customer_uid}
+						AND rownum = 1
+				)
+			)
+		where 
+			chat_room_uid IN (
+				SELECT bb.chat_room_uid FROM (
+					SELECT 
+						tcr.chat_room_uid AS chat_room_uid,
+						(RANK() OVER(ORDER BY tcr.room_create_dt DESC)) AS rnum
+					FROM
+						shfda.tb_chat_cstm_info tcci
+						LEFT JOIN shfda.tb_chat_room tcr ON tcr.cstm_uid = tcci.cstm_uid
+					WHERE
+						tcci.cstm_link_div_cd = #{cstm_link_div_cd}
+						AND tcci.cstm_link_customer_uid = #{cstm_link_customer_uid}
+				) bb WHERE bb.rnum = 1
+			)
+	</update>
+
+	<!-- 고객사 아이디 업데이트 -->
+	<select id="selectUserCocId" resultType="CMap">
+		/* manage.selectUserCocId */
+		select coc_id
+		from shfda.tb_chat_cstm_info
+		where cstm_link_div_cd = #{cstm_link_div_cd}
+		and cstm_link_customer_uid = #{cstm_link_customer_uid}
+		and coc_id is not null
+	</select>
+
+</mapper>

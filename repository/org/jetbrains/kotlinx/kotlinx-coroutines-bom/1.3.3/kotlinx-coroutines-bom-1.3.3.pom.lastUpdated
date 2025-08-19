@@ -1,0 +1,11 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Mar 10 15:30:46 KST 2022
+https\://oss.sonatype.org/content/repositories/snapshots/.lastUpdated=1646893845685
+https\://repo.maven.apache.org/maven2/.lastUpdated=1646893846360
+https\://oss.sonatype.org/content/repositories/snapshots/.error=
+https\://repo.spring.io/milestone/.error=
+file\:///C\:\\Project\\workspace_sp\\happytalk/repository/.error=
+https\://repo.spring.io/milestone/.lastUpdated=1646893845878
+https\://repo.spring.io/snapshot/.error=
+file\:///C\:\\Project\\workspace_sp\\happytalk/repository/.lastUpdated=1646893845487
+https\://repo.spring.io/snapshot/.lastUpdated=1646893846076

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="term">
+
+	<!-- 용어사전 목록 조회 -->
+	<select id="selectTermList" resultType="CMap">
+		/* term.selectTermList */
+		select *
+		from
+		(
+			select
+				a.term_num
+				, a.term_div_nm
+				, a.title
+				, a.cont
+				, a.term_tag
+				, a.del_yn as del_yn
+				, a.create_dt as create_dt
+				, a.creater
+				, to_char(a.update_dt,'yyyy-mm-dd hh24:mi') as update_dt				
+				, a.updater
+				, b.name as updater_nm				
+				, count(1) over() as tot_count
+				, row_number() over(order by a.update_dt desc) as rnum
+			from
+				shfda.tb_term_mgt a
+				, shfda.tb_member_info b
+			where
+				a.updater = b.member_uid
+				and a.del_yn = 'N'
+				<if test="schText != null and schText != ''.toString()">
+					<choose>
+						<when test="schType != null and schType == 'A'.toString()">
+							and (instr(lower(a.term_num), lower(#{schText}), 1, 1) > 0 or instr(lower(a.term_div_nm), lower(#{schText}), 1, 1) > 0 or instr(lower(a.title), lower(#{schText}), 1, 1) > 0
+							or instr(lower(a.cont), lower(#{schText}), 1, 1) > 0 or instr(lower(a.term_tag), lower(#{schText}), 1, 1) > 0)
+						</when>
+						<when test="schType != null and schType == 'I'.toString()">
+							and instr(lower(a.term_num), lower(#{schText}), 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'D'.toString()">
+							and instr(lower(a.term_div_nm), lower(#{schText}), 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'T'.toString()">
+							and instr(lower(a.title), lower(#{schText}), 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'C'.toString()">
+							and instr(lower(a.cont), lower(#{schText}), 1, 1) > 0
+						</when>
+						<when test="schType != null and schType == 'G'.toString()">
+							and instr(lower(a.term_tag), lower(#{schText}), 1, 1) > 0
+						</when>
+
+					</choose>
+				</if>				
+			order by a.update_dt desc
+		) t
+		where rnum between ((#{nowPage})*1 - 1) * (#{pageListCount}*1) + 1 and ((#{nowPage})*1) * (#{pageListCount}*1)
+	</select>
+
+
+	<!--  용어사전 상세 조회 -->
+	<select id="selectTermDetail" resultType="CMap">
+		/* term.selectTermDetail */
+		select
+			a.term_num
+			, a.term_div_nm
+			, a.title
+			, a.cont
+			, a.term_tag
+			, a.del_yn as del_yn
+			, a.create_dt as create_dt
+			, a.creater
+			, to_char(a.update_dt,'yyyy-mm-dd hh24:mi') as update_dt				
+			, a.updater
+			, b.name as updater_nm	
+		from
+		shfda.tb_term_mgt a,
+		shfda.tb_member_info b
+		where
+		a.updater = b.member_uid
+		<if test="termNum != null">
+			and a.term_num = #{termNum}
+		</if>
+	</select>
+
+	<update id="deleteTerm">
+		/* term.deleteTerm */
+		update shfda.tb_term_mgt
+		set del_yn    = 'Y'
+		  , update_dt = sysdate
+		  , updater   = #{sessionMemberUid}
+		where term_num = #{termNum}
+	</update>
+
+	<insert id="insertTerm">
+		/* term.insertTerm */
+		<selectKey keyProperty="termNum" order="BEFORE" resultType="String">
+			select shfda.seq_TERM_NUM.nextval from dual
+		</selectKey>
+		insert into shfda.tb_term_mgt
+		(
+		term_num
+		, term_div_nm
+		, title
+		, cont
+		, term_tag
+		, del_yn
+		, create_dt
+		, creater
+		, update_dt
+		, updater
+		)
+		values
+		(
+		#{termNum}
+		, #{termDivNm}
+		, #{title}
+		, #{cont}
+		, #{termTag}
+		, 'N'
+		, sysdate
+		, #{sessionMemberUid}
+		, sysdate
+		, #{sessionMemberUid}
+		)
+	</insert>
+
+	<update id="updateTerm">
+		/* term.updateTerm */
+		update shfda.tb_term_mgt
+		set title         = #{title}
+		  , cont          = #{cont}
+		  , term_div_nm = #{termDivNm}
+		  , term_tag = #{termTag}
+		  , update_dt     = sysdate
+		  , updater       = #{sessionMemberUid}
+		where term_num = #{termNum}
+	</update>
+
+	<!-- 용어검색-->
+	<select id="selectAutoTermListAjax"  resultType="CMap">
+		/* term.selectAutoTermListAjax*/
+		select 
+			a.term_num
+			, a.term_div_nm
+			, a.title
+			, a.cont 
+			, a.term_tag
+		from 
+			shfda.tb_term_mgt a 
+		where a.del_yn = 'N'
+		order by a.update_dt desc
+	</select>
+	
+	<!-- 용어검색로그-->
+	<insert id="insertReportingTerm">
+		/* term.insertReportingTerm */
+		insert into shfda.tb_term_log
+		(
+			  SEARCH_DATE
+			, SEARCH_TEXT
+			, SEARCH_CNT
+		)
+		values
+		(
+			sysdate
+			, #{schText}
+			, #{schCnt}
+		)
+	</insert>
+	
+	<!-- 용어 전체 검색 -->
+	<select  id="selectAllTermList" resultType="CMap">
+		/*term.selectAllTermList*/
+		select 
+			*
+		from
+			(
+				select
+					a.term_num
+					, a.term_div_nm
+					, a.title
+					, replace( dbms_lob.substr( a.cont,dbms_lob.getlength(a.cont),1 ),chr(13),'') as cont
+					, a.term_tag
+					, a.del_yn as del_yn
+					, a.create_dt as create_dt
+					, a.creater
+					, to_char(a.update_dt,'yyyy-mm-dd hh24:mi') as update_dt				
+					, a.updater
+					, b.name as updater_nm				
+					, count(1) over() as tot_count
+				from
+					shfda.tb_term_mgt a
+					, shfda.tb_member_info b
+				where
+					a.updater = b.member_uid
+					and a.del_yn = 'N'
+			)
+			order by update_dt desc
+	</select>
+</mapper>

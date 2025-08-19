@@ -1,0 +1,433 @@
+spring:
+  application:
+    name: happytalk
+  profiles:
+    # SPRING_PROFILES_ACTIVE
+    active: local
+
+  devtools:
+    livereload:
+      enabled: true
+    add-properties: true
+
+  output:
+    ansi:
+      enabled: detect
+
+#  session:
+#    store-type: redis
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+
+  datasource:
+    #jndi-name: chatcon_ds
+    url: jdbc:oracle:thin:@//${DB_URL:127.0.0.100:12310}/${DB_SID:DOHFZD}
+    username: ${DB_USER:PHFDAAPP}
+    password: ${DB_PASSWD:Digital1*}
+    hikari:
+      maximum-pool-size: 5
+      connection-test-query: select 1 from dual
+
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+
+  jmx:
+    enabled: false
+
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+#  jackson:
+#    property-naming-strategy: SNAKE_CASE
+
+mybatis:
+  config-location: classpath:mybatis.xml
+#  mapper-location: mapper/**/*.xml
+
+logging:
+  path: ${LOGGING_BASE_PATH:/opt/log}/${spring.application.name}
+  pattern:
+    console: '%(%d{yyyy-MM-dd HH:mm:ss.SSS} %30.30logger:%-4line) %-5level > %msg\n'
+    file: '%(%d{yyyy-MM-dd HH:mm:ss.SSS} %30.30logger:%-4line) %-5level > %msg\n'
+  file:
+    max-history: 7
+    max-size: 10MB
+  level:
+    root: info
+    org.springgramework.web: error
+    org.springframework.web.filter.CommonsRequestLoggingFilter: error
+
+server:
+  port: 7481
+  servlet:
+    context-path: /${spring.application.name}
+    session:
+      timeout: 12h
+  error:
+    path: /error
+    whitelabel:
+      enabled: false
+    include-exception: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    shutdown:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+
+ht:
+  happyTalkHostName: localhost:8080
+  siteId: 43021dab-7760-4c26-8e35-145964641916
+  staticUpdateParam: 20200617-01
+  storagePath: ${STORAGE_PATH:/chatshare/storage}
+#  uploadUrlBase: https://${ht.happyTalkHostName}/${spring.application.name}/upload
+  uploadUrlBase: /${spring.application.name}/storage/upload
+  happyTalkUrl: /${spring.application.name}
+#  happyTalkPublicUrl: ${HAPPYTALK_PUBLIC_URL:http://localhost:8080}
+#  happyTalkPrivateUrl: ${HAPPYTALK_PRIVATE_URL:http://localhost}
+  happyBotApiUrl: ${HAPPYBOT_API_URL_BASE:http://45.119.31.77:7480}/happybot/api/message
+  happyBotApiKey: 5a065fd4-90d8-48f2-b950-5260663c3a91
+  happyBotBuilderUrl: /happybot
+  webhookApiUrl: ${WEBHOOK_API_URL_BASE:http://45.119.31.77:7480}/api-hook/external/send
+#  openBuilderSkillApiUrl: http://localhost:8001/${spring.application.name}/open_builder/skill
+#  legacyApiUrl: ${LEGACY_API_URL_BASE:http://localhost:8001}/gateway
+  loginUrl: /${spring.application.name}/loginPage
+  enableSchedule: false
+  redirectBasePath:
+  chatRoomPageSize: 10
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    path: /app/ipcc/ftpload/
+
+  # samsung 개발
+  kakaoCounselId: "@nzg27ik8mja0nuy"
+  #naverTalkTalkId: qwer17
+  kakaoJavascriptApiKey: a62bd90f0e6b68f7b60abff60ed36d84
+  damoIniPath: classpath:damo/scpdb_agent.ini
+  damoAgentId: T7_PTWASDEV
+  damoDbName: DEVDB
+  damoOwner: TEST_API
+  damoTblName: PRIVACY
+  
+  messageBroker:
+    host: ${QUEUE_HOST:localhost}
+    port: 61613
+    user: guest
+    pass: guest
+  wsConnectionPath: /ws
+  wsTopicPath: /topic
+  wsQueuePath: /topic
+  wsNoticePath: /topic/notice
+  wsDefaultDestinationPath: /publish
+
+  defaultAssignMemeberUid: 9999999992
+  systemMemeberUid: 9999999991
+
+  happyBotMemeberUid: 9999999993
+  iBotMemeberUid: 9999999994
+  categoryBotMemeberUid: 9999999996
+  mockChatBotMemeberUid: 9999999995
+
+  simulatorUid: 61894ef0-1f4f-4bd0-b6ef-bb38a9a62671
+debug: false
+
+---
+# 개발-tomcat
+spring:
+  profiles: devtom
+
+  redis:
+    host: ${REDIS_HOST:45.119.31.77}
+    port: ${REDIS_PORT:6379}
+
+  datasource:
+    jndi-name: chatcon_ds
+    #url: jdbc:oracle:thin:@//${DB_URL:45.112.1.132:5525}/${DB_SID:D_DOHFZ}
+    #username: ${DB_USER:SHFDA}
+    #password: ${DB_PASSWD:Digital1*}
+    hikari:
+      maximum-pool-size: 10
+
+logging:
+  path: ${LOGGING_BASE_PATH:/chat/tomcat9/applog}/${spring.application.name}
+  level:
+    auth: info
+#    autoCmp: info
+    batch: debug
+#    category: info
+#    chat: debug
+#    chatManage: debug
+#    common: info
+#    customer: info
+#    happyBot: debug
+#    manage: info
+#    member: info
+#    menu: info
+#    notice: info
+#    report: debug
+#    reporting: debug
+#    setting: info
+#    template: info
+    mappingCustomer: debug
+
+ht:
+  happyTalkHostName: http://localhost:7480
+  enableSchedule: true
+  # IPCC_ADV 고객여정 URL
+  #genesysCsApiUrl: https://45.9.253.26:18080/genesys/1/cs
+  genesysCsApiUrl: https://cvmdev.ss.local:18080/genesys/1/cs
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    host: 45.9.253.26
+    port: 22
+    user: xcronload
+    pswd: H@nsol00
+---
+ # 개발-jeus
+spring:
+  profiles: dev
+
+  redis:
+    host: ${REDIS_HOST:45.119.31.77}
+    port: ${REDIS_PORT:6379}
+
+  datasource:
+    jndi-name: chatcon_ds
+    #url: jdbc:oracle:thin:@//${DB_URL:45.112.1.132:5525}/${DB_SID:D_DOHFZ}
+    #username: ${DB_USER:SHFDA}
+    #password: ${DB_PASSWD:Digital1*}
+    hikari:
+      maximum-pool-size: 10
+
+logging:
+  path: ${LOGGING_BASE_PATH:/chat/log}/${spring.application.name}
+  level:
+    auth: info
+#    autoCmp: info
+    batch: debug
+#    category: info
+#    chat: debug
+#    chatManage: debug
+#    common: info
+#    customer: info
+#    happyBot: debug
+#    manage: info
+#    member: info
+#    menu: info
+#    notice: info
+#    report: debug
+#    reporting: debug
+#    setting: info
+#    template: info
+    mappingCustomer: debug
+
+ht:
+  happyTalkHostName: http://localhost:7480
+  enableSchedule: true
+  # IPCC_ADV 고객여정 URL
+  #genesysCsApiUrl: https://45.9.253.26:18080/genesys/1/cs
+  genesysCsApiUrl: https://cvmdev.ss.local:18080/genesys/1/cs
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    host: 45.9.253.26
+    port: 22
+    user: xcronload
+    pswd: H@nsol00
+---
+# 운영1
+spring:
+  profiles: live1
+  datasource:
+    jndi-name: chatcon_ds
+    #url: jdbc:oracle:thin:@//${DB_URL:45.112.1.132:5525}/${DB_SID:D_DOHFZ}
+    #username: ${DB_USER:SHFDA}
+    #password: ${DB_PASSWD:Digital1*}
+    hikari:
+      maximum-pool-size: 10
+  devtools:
+    livereload:
+      enabled: false
+    add-properties: false
+
+logging:
+  path: ${LOGGING_BASE_PATH:/chat/log}/${spring.application.name}
+  config: classpath:logback-live.xml
+  file:
+    max-history: 30
+    max-size: 10MB
+  level:
+    batch: info
+
+
+ht:
+  #happyTalkHostName: ${HOST_NAME:tchat}.samsungpop.com
+  #happyTalkHostName: https://chat.samsungpop.com
+  happyTalkHostName: 45.112.31.141:7480
+  enableSchedule: true
+  
+  happyBotApiUrl: ${HAPPYBOT_API_URL_BASE:http://45.112.31.141:7480}/happybot/api/message
+  webhookApiUrl: ${WEBHOOK_API_URL_BASE:http://45.112.31.141:7480}/api-hook/external/send
+  
+  # 삼성증권 운영
+  kakaoCounselId: "@투자톡"
+  kakaoJavascriptApiKey: a62bd90f0e6b68f7b60abff60ed36d84
+  damoIniPath: classpath:damo/scpdb_agent_live1.ini
+  damoAgentId: S4_PTWAS01
+  damoDbName: DEVDB
+  damoOwner: API
+  damoTblName: PRIVACY
+
+  # IPCC_ADV 고객여정 URL
+  #genesysCsApiUrl: https://45.9.105.202:18080/genesys/1/cs
+  genesysCsApiUrl: https://cvmdev.ss.local:18080/genesys/1/cs
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    host: 45.9.253.26
+    port: 22
+    user: xcronload
+    pswd: H@nsol00
+---
+# 운영2
+spring:
+  profiles: live2
+  datasource:
+    jndi-name: chatcon_ds
+    #url: jdbc:oracle:thin:@//${DB_URL:45.112.1.132:5525}/${DB_SID:D_DOHFZ}
+    #username: ${DB_USER:SHFDA}
+    #password: ${DB_PASSWD:Digital1*}
+    hikari:
+      maximum-pool-size: 10
+  devtools:
+    livereload:
+      enabled: false
+    add-properties: false
+
+logging:
+  path: ${LOGGING_BASE_PATH:/chat/log}/${spring.application.name}
+  config: classpath:logback-live.xml
+  file:
+    max-history: 30
+    max-size: 10MB
+  level:
+    batch: info
+
+
+ht:
+  #happyTalkHostName: ${HOST_NAME:tchat}.samsungpop.com
+  #happyTalkHostName: https://chat.samsungpop.com
+  happyTalkHostName: 45.112.31.142:7480
+#  happyTalkPrivateUrl: ${HAPPYTALK_PRIVATE_URL:http://192.168.247.47:18081}
+  enableSchedule: true
+  
+  happyBotApiUrl: ${HAPPYBOT_API_URL_BASE:http://45.112.31.142:7480}/happybot/api/message
+  webhookApiUrl: ${WEBHOOK_API_URL_BASE:http://45.112.31.142:7480}/api-hook/external/send
+
+  # 삼성증권 운영
+  kakaoCounselId: "@투자톡"
+  kakaoJavascriptApiKey: a62bd90f0e6b68f7b60abff60ed36d84
+  damoIniPath: classpath:damo/scpdb_agent_live2.ini
+  damoAgentId: S4_PTWAS02
+  damoDbName: DEVDB
+  damoOwner: API
+  damoTblName: PRIVACY    
+
+  # IPCC_ADV 고객여정 URL
+  #genesysCsApiUrl: https://45.9.105.202:18080/genesys/1/cs
+  genesysCsApiUrl: https://cvmdev.ss.local:18080/genesys/1/cs
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    host: 45.9.253.26
+    port: 22
+    user: xcronload
+    pswd: H@nsol00
+---
+# 로컬
+spring:
+  profiles: local
+  output:
+    ansi:
+      enabled: always
+  session:
+    timeout: 300
+  thymeleaf:
+    cache: false
+  devtools:
+    restart:
+      enabled: false
+  datasource:
+    url: >-
+      jdbc:oracle:thin:@
+        (
+          DESCRIPTION=
+            (ADDRESS_LIST=
+              (ADDRESS=(PROTOCOL=TCP)(HOST=${DB_HOST:127.0.0.100})(PORT=${DB_PORT:12310}))
+            )
+            (CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=${DB_SID:DOHFZD}))
+        )
+    username: ${DB_USER:SHFDA}
+    password: ${DB_PASSWD:Digital1*}
+
+logging:
+  level:
+    endCtg: debug  
+    auth: debug
+    autoCmp: debug
+    batch: debug
+    category: debug
+    chat: debug
+    chatManage: debug
+    common: debug
+    customer: debug
+    happyBot: debug
+    manage: debug
+    member: debug
+    menu: debug
+    term: debug
+    notice: debug
+    report: debug
+    reporting: debug
+    setting: debug
+    template: debug
+    codemgr: debug
+    screen: debug
+    mappingCustomer: debug
+    ht.util.CipherUtils: debug
+    ht.controller.WebSocketController: debug
+server:
+  port: 8080
+ht:
+  messageBroker:
+    host: ${QUEUE_HOST:localhost}
+  happyTalkHostName: localhost:8080
+  uploadUrlBase: http://${ht.happyTalkHostName}/${spring.application.name}/upload
+  happyTalkUrl: http://${ht.happyTalkHostName}/${spring.application.name}
+#  happyTalkPublicUrl: ${HAPPYTALK_PUBLIC_URL:http://localhost:8080}
+  happyBotApiUrl: http://localhost:8855/happybot/api/message
+  happyBotBuilderUrl: http://localhost:8855/happybot
+  webhookApiUrl: http://localhost:7480/api-hook/external/send
+  openBuilderSkillApiUrl: http://${ht.happyTalkHostName}/${spring.application.name}/open_builder/skill
+  legacyApiUrl: http://localhost:8088/gateway
+  # IPCC_ADV 고객여정 URL
+  #genesysCsApiUrl: https://45.9.253.26:18080/genesys/1/cs
+  genesysCsApiUrl: https://cvmdev.ss.local:18080/genesys/1/cs
+  # IPCC_IST 통합통계 FTP 서버 정보
+  istFtp:
+    host: 45.9.253.26
+    port: 22
+    user: xcronload
+    pswd: H@nsol00

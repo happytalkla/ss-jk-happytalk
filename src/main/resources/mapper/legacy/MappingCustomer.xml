@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mappingCustomer">
+
+	<!-- 기간계 고객 조회 -->
+	<select id="selectMappingCustomer" resultType="CMap">
+		/* mappingCustomer.selectMappingCustomer */
+		select *
+		from shfda.tb_mapping_cust_info
+		<where>
+			<if test="chatRoomUid != null">
+		    and room_id = #{chatRoomUid}
+			</if>
+			<if test="lonNo != null">
+			and lon_no = #{lonNo}
+			</if>
+			<if test="lonRcvNo != null">
+			and lon_rcv_no = #{lonRcvNo}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+			<if test="notLonBlamt != null">
+			and lon_blamt != #{notLonBlamt}
+			</if>
+			<if test="rcvStsCdNot != null">
+			and rcv_sts_cd != #{rcvStsCdNot}
+			</if>
+			<if test="rcvDtLessDay != null">
+			and rcv_dt &gt; to_char(sysdate - #{rcvDtLessDay}, 'yyyymmdd')
+			</if>
+			<if test="lonGdsNmNotNull != null">
+			and lon_gds_nm is not null
+			</if>
+		</where>
+		order by seq desc
+	</select>
+
+	<!-- 콜상담이력 조회 -->
+	<select id="selectMappingCustomerCallHistoryList" resultType="CMap">
+		/* mappingCustomer.selectMappingCustomerCallHistoryList */
+		select *
+		from shfda.tb_mapping_call_hist a
+		where
+			room_id = #{chatRoomUid}
+		order by seq desc
+	</select>
+
+	<select id="selectMappingCustomerBak" resultType="CMap">
+		/* mappingCustomer.selectMappingCustomerBak */
+	select * from (
+		select *
+		from shfda.tb_mapping_cust_info
+		<where>
+			<if test="chatRoomUid != null">
+		    and room_id = #{chatRoomUid}
+			</if>
+			<if test="lonNo != null">
+			and lon_no = #{lonNo}
+			</if>
+			<if test="lonRcvNo != null">
+			and lon_rcv_no = #{lonRcvNo}
+			</if>
+			<if test="useYn != null">
+			and use_yn = #{useYn}
+			</if>
+		</where>
+		order by dbms_random.random
+	)
+	where rownum &lt; 5
+	</select>
+	
+	<!-- 콜상담이력 조회 -->
+	<select id="selectCallHistListBak" resultType="CMap">
+		/* customer.selectCallHistList */
+		select a.mapping_dt /* 상담일자 */
+		     , a.list_dvsn  /* 내역구분 */
+		     , a.lon_no     /* 대출번호 */
+		     , to_char(a.reg_dttm, 'yyyy-mm-dd hh24:mi:ss') as reg_dttm   /* 상담일시 */
+		     , a.bsaf_tp_nm /* 업무유형 */
+		     , a.cuns_tp_nm /* 상담유형 */
+		     , a.cuns_cont  /* 내용 */
+		     , a.rgsr_emnm  /* 상담사 */
+		  from shfda.tb_mapping_call_hist a
+		 where room_id = #{chatRoomUid}
+		 order by mapping_dt desc
+	</select>
+	
+	<!-- 계약정보 목록 조회 -->
+	<select id="selectCustInfoListBak" resultType="CMap">
+		/* customer.selectCustInfoList */
+		select lon_no /* 대출번호 */
+		     , lon_gds_nm /* 상품명 */
+		     , rfnd_metd_dvcd /* 상환방법코드 */
+		     , decode(lon_rti, null, lon_rti, lon_rti || '%') as lon_rti /* 정상금리 */
+		     , decode(agrn_dy, null, agrn_dy, agrn_dy || '일') as agrn_dy /* 약정일 */
+		     , to_char(to_date(lon_dt), 'yyyy/mm/dd') as lon_dt /* 대출일자 */
+		     , decode(lon_amt, null, lon_amt, to_char(lon_amt, '999,999,999,999,999') || '원') as lon_amt /* 대출(조정)금액 */
+		     , to_char(to_date(expy_dt), 'yyyy/mm/dd') as expy_dt /* 만기일자 */
+		     , lon_tr /* 계약기간 */
+		     , fnl_paym_sqnc /* 최종납입회차 */
+		     , wtcs_bank_nm /* 출금은행명 */
+		     , wtcs_bank_acno /* 자동이체계좌 */
+		     , cndn_sts_nm as cndn_sts_nm1 /* 계약서수령여부 */
+		     , mrkn_agrm_yn /* 마케팅동의여부 */
+		     , mang_brnc_nm /* 관리지점 */
+		     , mang_pic_emno_nm /* 관리지점담당자명 */
+          from shfda.tb_mapping_cust_info
+         where room_id = #{chatRoomUid} and use_yn = 'Y'
+         order by rcv_dt desc
+	</select>
+	
+	<select id="selectCustomerSinfoBak" resultType="CMap">
+		/* customer.selectCustomerSinfo */
+		select t1.cust_no /* 고객번호 */
+		     , decode(t1.cust_gndr, null, t1.cust_nm, t1.cust_nm || '(' || t1.cust_gndr || ')') as cust_nm /* 고객명(성별) */
+		     , decode(t1.brdy_dt, null, t1.cust_age, t1.cust_age || '(' || to_char(to_date(t1.brdy_dt), 'yyyy/mm/dd') || ')') as cust_age /* 연령(생년월일) */
+		     , t1.mb_tlno /* 핸드폰번호 */
+		     , t1.zipadr /* 실거주 주소 */
+		     , t1.adtn_lon_dvnm /* 대상여부 */
+		     , t1.auto_yn /* 자동여부 */
+		     , decode(t1.lon_psbl_amt, null, t1.lon_psbl_amt, to_char(t1.lon_psbl_amt, '999,999,999,999,999') || '원') as lon_psbl_amt /* 가능한도 */
+		     , t1.uni_grd_cd /* BS등급 */
+		     , t1.cndn_sts_nm /* 계약서수령여부 */
+		     , t1.crd_agrm_yn /* 신용조회동의 */
+		     , t1.lon_rcv_no /* 접수번호 */
+		     , t1.rcv_path_nm /* 접수경로명 */
+		     , t1.lon_gds_nm /* 상품명 */
+		     , to_char(to_date(t1.rcv_dt), 'yyyy/mm/dd') as rcv_dt /* 접수일자 */
+		     , t1.prgs_sts_nm /* 진행상태 */
+		     , t1.pic_emno_nm /* 담당자 */
+		     , t1.lon_no /* 대출번호 */
+		     , t1.lon_gds_nm /* 상품명 */
+		     , t1.rfnd_metd_dvcd /* 상환방법코드 */
+		     , decode(t1.lon_rti, null, t1.lon_rti, t1.lon_rti || '%') as lon_rti /* 정상금리 */
+		     , decode(t1.agrn_dy, null, t1.agrn_dy, t1.agrn_dy || '일') as agrn_dy /* 약정일 */
+		     , to_char(to_date(t1.lon_dt), 'yyyy/mm/dd') as lon_dt /* 대출일자 */
+		     , decode(t1.lon_amt, null, t1.lon_amt, to_char(t1.lon_amt, '999,999,999,999,999') || '원') as lon_amt /* 대출(조정)금액 */
+		     , to_char(to_date(t1.expy_dt), 'yyyy/mm/dd') as expy_dt /* 만기일자 */
+		     , t1.lon_tr /* 계약기간 */
+		     , t1.fnl_paym_sqnc /* 최종납입회차 */
+		     , t1.wtcs_bank_nm /* 출금은행명 */
+		     , t1.wtcs_bank_acno /* 자동이체계좌 */
+		     , t1.cndn_sts_nm as cndn_sts_nm1 /* 계약서수령여부 */
+		     , t1.mrkn_agrm_yn /* 마케팅동의여부 */
+		     , t1.mang_brnc_nm /* 관리지점 */
+		     , t1.mang_pic_emno_nm /* 관리지점담당자명 */
+		     , decode(t1.lon_blamt, null, t1.lon_blamt, to_char(t1.lon_blamt, '999,999,999,999,999') || '원') as lon_blamt /* 대출(조정)잔액 */
+		     , decode(t1.cpin_sum_amt, null, t1.cpin_sum_amt, to_char(t1.cpin_sum_amt, '999,999,999,999,999') || '원') as cpin_sum_amt /* 원리금합계 */
+		     , decode(t1.tot_ocrn_iamt, null, t1.tot_ocrn_iamt, to_char(t1.tot_ocrn_iamt, '999,999,999,999,999') || '원') as tot_ocrn_iamt /* 총발생이자(청구) */
+		     , decode(t1.tot_ocrn_iamt_ept, null, t1.tot_ocrn_iamt_ept, to_char(t1.tot_ocrn_iamt_ept, '999,999,999,999,999') || '원') as tot_ocrn_iamt_ept /* 총발생이자(완납) */
+		     , decode(t1.rfnd_prng_pramt, null, t1.rfnd_prng_pramt, to_char(t1.rfnd_prng_pramt, '999,999,999,999,999') || '원') as rfnd_prng_pramt /* 회차상환원금 */
+		     , decode(t1.rfnd_prng_cpin, null, t1.rfnd_prng_cpin, to_char(t1.rfnd_prng_cpin, '999,999,999,999,999') || '원') as rfnd_prng_cpin /* 회차상환원리금 */
+		     , decode(t1.lack_amt, null, t1.lack_amt, to_char(t1.lack_amt, '999,999,999,999,999') || '원') as lack_amt /* 부족금 */
+		     , to_char(to_date(t1.nxttr_rfnd_dt), 'yyyy/mm/dd') as nxttr_rfnd_dt /* 차기입금일 */
+		     , decode(t1.ints_dnoa, null, t1.ints_dnoa, t1.ints_dnoa || '일') as ints_dnoa /* 연체일수 */
+		     , t1.imgn_bank_nm /* 가상계좌은행명 */
+		     , t1.imgn_acno /* 가상계좌 */
+		     , decode(t1.mdpt_rfnd_cmsn, null, t1.mdpt_rfnd_cmsn, to_char(t1.mdpt_rfnd_cmsn, '999,999,999,999,999') || '원') as mdpt_rfnd_cmsn /* 중도상환수수료 */
+		     , decode(t1.expy_cnt_dt, null, t1.expy_cnt_dt, t1.expy_cnt_dt || '일') as expy_cnt_dt /* 만기경과일수 */
+		  from (
+		        select *
+		          from shfda.tb_mapping_cust_info
+		         where room_id = #{chatRoomUid}
+		         order by mapping_Dt desc
+		       ) t1
+		 where rownum = 1
+	</select>
+	
+</mapper>

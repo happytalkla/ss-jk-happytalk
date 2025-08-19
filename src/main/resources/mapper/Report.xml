@@ -1,0 +1,1554 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="report">
+
+	<!-- DB 현재시간 조회 -->
+	<select id="selectNowTime" resultType="String">
+		/* report.selectNowTime */
+		select replace(replace(to_char(sysdate, 'AM hh : mi'), '오전', 'AM'), '오후', 'PM')
+		from dual
+	</select>
+	
+	<!-- 상담관리 대시보드 윗줄-->
+	<select id="selectTotalReport" resultType="CMap">
+		/* report.selectTotalReport */
+		select
+		(
+			SELECT count(*) 
+			FROM shfda.tb_SCH_CNSR a 
+				LEFT OUTER JOIN shfda.tb_MEMBER_INFO b ON (a.MEMBER_UID = b.MEMBER_UID)
+			WHERE 
+				a.CNS_POSSIBLE_YN = 'Y'
+				AND to_date(a.SCH_DATE, 'yyyymmdd') = trunc(sysdate)
+				AND	b.VALID_YN = 'Y'
+				AND b.LEAVE_YN = 'N'
+				<if test="departCd != null">
+					and b.depart_cd = #{departCd}
+				</if>
+		)  as cnt_today_adv -- 당일근무상담원수
+		,(
+			SELECT count(*) 
+			FROM shfda.tb_SCH_CNSR a 
+				LEFT OUTER JOIN shfda.tb_MEMBER_INFO b ON (a.MEMBER_UID = b.MEMBER_UID)
+				LEFT OUTER JOIN shfda.tb_SET_CNSR c ON (a.MEMBER_UID = c.MEMBER_UID)
+			WHERE 
+				a.CNS_POSSIBLE_YN = 'Y'
+				AND c.WORK_STATUS_CD = 'W'
+				AND to_date(a.SCH_DATE, 'yyyymmdd') = trunc(sysdate)
+				AND TO_DATE(a.START_TIME, 'hh24mi') <![CDATA[<]]>= TO_DATE(TO_CHAR(sysdate, 'hh24mi'), 'hh24mi')
+				AND TO_DATE(a.END_TIME, 'hh24mi') >= TO_DATE(TO_CHAR(sysdate, 'hh24mi'),  'hh24mi')
+				AND	b.VALID_YN = 'Y'
+				AND b.LEAVE_YN = 'N'
+				<if test="departCd != null">
+					and b.depart_cd = #{departCd}
+				</if>
+		) as cnt_now_adv -- 현재근무상담원수
+		, nvl((
+			select count(*) 
+			from shfda.tb_chat_room
+			where		
+				room_create_dt >= trunc(sysdate) 
+				and cnsr_div_cd = 'C'
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+				), 0)		as total_cns -- 전체상담
+		, nvl((	
+			select count(*) 
+			from shfda.tb_chat_room
+			where
+				chat_room_status_cd = '31'
+				and room_create_dt >= trunc(sysdate)
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+		), 0) 			as wait_cns -- 상담대기(미배정)
+		,nvl((
+			select count(*) from shfda.tb_chat_room
+			where
+				cnsr_div_cd = 'C'
+				and chat_room_status_cd = '41'
+				and room_create_dt >= trunc(sysdate)
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+		), 0)				as wait_cstm -- 상담대기(미접수)
+		,nvl((
+			select count(*) from shfda.tb_chat_room
+			where
+			 	chat_room_status_cd = '51'
+				and room_create_dt >= trunc(sysdate)
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+		), 0)		as ing_stanby_cstm -- 상담중(고객대기중)
+		,nvl((
+			select count(*) from shfda.tb_chat_room
+			where
+			 	chat_room_status_cd = '61'
+				and room_create_dt >= trunc(sysdate)
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+		), 0)			as ing_stanby_cnsr -- 상담중(상담원대기중)
+		,nvl((
+			select count(*) 
+			from shfda.tb_chat_room
+			where
+				cnsr_div_cd = 'C'
+				and chat_room_status_cd in ('51','61')
+				and room_create_dt >= trunc(sysdate)
+				<if test="departCd != null">
+					and depart_cd = #{departCd}
+				</if>
+		), 0)				 as prsc_cns -- 상담원_상담진행
+		from dual
+	</select>
+	
+<!-- 상담관리 대시보드 분류별 배정대기 및 상담중-->
+	<select id="selectCTGWaitIng" resultType="CMap">
+	/* report.selectCTGWaitIng */
+		SELECT ctg_nm_1, ctg_nm_2, ctg_num
+			, sum(
+				CASE WHEN CHAT_ROOM_STATUS_CD IN ('41') THEN 1 ELSE 0 end
+				)		AS wait_cnt
+			, sum(
+				CASE WHEN CHAT_ROOM_STATUS_CD IN ('51', '61') THEN 1 ELSE 0 end 
+				)		AS ing_cnt
+		FROM (
+				 select 
+					case when g.ctg_num is null then 
+							DECODE(h.ctg_mgt_dpt, '2', f.ctg_nm, g.ctg_nm)
+						else 
+							DECODE(h.ctg_mgt_dpt, '2', g.ctg_nm, e.ctg_nm)
+						end				AS ctg_nm_1
+					,case when g.ctg_num is null then 
+							DECODE(h.ctg_mgt_dpt, '2', e.ctg_nm, f.ctg_nm)
+						else 
+							DECODE(h.ctg_mgt_dpt, '2', f.ctg_nm, g.ctg_nm)
+						end				AS ctg_nm_2
+					, a.CTG_NUM
+					, a.CHAT_ROOM_STATUS_CD
+				 from shfda.tb_chat_room a
+						left outer join shfda.tb_ctg_info e on (a.ctg_num = e.ctg_num)
+						left outer join shfda.tb_ctg_info f on (e.upper_ctg_num = f.ctg_num)
+						left outer join shfda.tb_ctg_info g on (f.upper_ctg_num = g.ctg_num)
+						inner join (select ctg_mgt_dpt
+									from shfda.tb_set
+									where rownum = 1) h on (1 = 1)
+				WHERE a.CHAT_ROOM_STATUS_CD IN('41', '51', '61')	and room_create_dt >= trunc(sysdate)
+					<if test="departCd != null">
+							and a.depart_cd = #{departCd}
+						</if>
+			 		) y
+			 group by ctg_nm_2 , ctg_nm_1, ctg_num
+			 ORDER BY ctg_nm_1, ctg_nm_2
+	</select>
+	
+	<!-- 상담관리 대시보드	상담원현황-->
+	<select id="selectCnsrReport" resultType="CMap">
+		/* report.selectCnsrReport*/ 
+			SELECT 
+				t.name as name
+				, manager_nm
+				, nvl(t.wait_cnt, 0)					as wait_cnt
+				, nvl(t.prsc_cnt, 0)						as prsc_cnt
+				, nvl(t.end_cnt, 0)					as end_cnt
+				, nvl(t.after_yn, 0)					as after_yn
+				, nvl(t.evl_cnt, 0)						as evl_cnt
+				, round(nvl(t.evl_tot_score/decode(evl_cnt, 0, NULL), 0), 1)				as evl_avg_score  
+				, nvl(floor(t.ti/86400),0) 																as cns_date
+				, nvl(to_char(to_date(ceil(mod(ti,86400)),'SSSSS'),'HH24'),'00') 		as cns_hour
+				, nvl(to_char(to_date(ceil(mod(ti,86400)),'SSSSS'),'mi'),'00') 			as cns_min
+				, nvl(to_char(to_date(round(mod(ti,86400)),'SSSSS'),'ss'),'00') 			as cns_sec
+				, case WHEN t.WORK_YN = 'W'	then '근무중' else '휴식중' end 		as work_yn 
+				, round(t.ti, 1) 																				as cns_time
+				, t.MEMBER_UID
+			FROM
+			(
+				SELECT 
+					a.CNS_POSSIBLE_YN AS CNS_POSSIBLE_YN
+					, b.NAME AS name
+					, (SELECT count(*) FROM shfda.tb_CHAT_ROOM WHERE chat_room_status_cd = '41' AND MEMBER_UID = a.MEMBER_UID AND ROOM_CREATE_DT >= TRUNC(sysdate)) as wait_cnt
+					, (SELECT count(*) FROM shfda.tb_CHAT_ROOM WHERE chat_room_status_cd in ('51','61') AND MEMBER_UID = a.MEMBER_UID AND ROOM_CREATE_DT >= TRUNC(sysdate)) AS prsc_cnt
+					, (SELECT count(*) FROM shfda.tb_CHAT_ROOM WHERE chat_room_status_cd = '91' AND MEMBER_UID = a.MEMBER_UID AND ROOM_CREATE_DT > TRUNC(sysdate)) AS end_cnt
+					, (
+						SELECT count(*) FROM shfda.tb_CHAT_END_INFO e , shfda.tb_CHAT_ROOM f 
+						WHERE e.CHAT_ROOM_UID = f.CHAT_ROOM_UID AND f.MEMBER_UID = a.MEMBER_UID AND updater IS NULL AND CREATE_DT >= TRUNC(sysdate)
+					) AS after_yn
+					, (
+						SELECT 
+						sum(
+							nvl(
+							(
+								TR.last_chat_dt - 
+								(SELECT min(reg_dt) FROM shfda.tb_CHAT ct WHERE ct.CHAT_ROOM_UID = tr.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR' GROUP BY ct.CHAT_ROOM_UID)
+							)*86400
+							,0)
+						)  / count(1) AS sum_sec
+						FROM shfda.tb_CHAT_ROOM tr
+						WHERE tr.END_YN = 'Y' 
+							AND ROOM_CREATE_DT >= trunc(SYSDATE)
+							AND ROOM_CREATE_DT <![CDATA[<]]> trunc(SYSDATE) + 1
+							AND DEPART_CD = #{departCd}  
+							and cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+							and TO_NUMBER(member_uid) <![CDATA[<]]> 9999999991  
+							AND MEMBER_UID = b.MEMBER_UID
+					) AS ti
+					, (
+						SELECT count(*) FROM shfda.tb_CNS_EVL c, shfda.tb_CHAT_ROOM d 
+						WHERE c.CHAT_ROOM_UID = d.CHAT_ROOM_UID AND d.chat_room_status_cd = '91' AND d.MEMBER_UID = a.MEMBER_UID AND d.ROOM_CREATE_DT > TRUNC(sysdate)
+					) AS evl_cnt
+					, (
+						SELECT nvl(sum(c.EVL_SCORE) , 0) FROM shfda.tb_CNS_EVL c, shfda.tb_CHAT_ROOM d 
+						WHERE c.CHAT_ROOM_UID = d.CHAT_ROOM_UID AND d.chat_room_status_cd = '91' AND d.MEMBER_UID = a.MEMBER_UID AND d.ROOM_CREATE_DT > TRUNC(sysdate)
+					) AS evl_tot_score
+					, (SELECT WORK_STATUS_CD FROM shfda.tb_SET_CNSR WHERE MEMBER_UID = a.MEMBER_UID) AS WORK_YN
+					, (select name from shfda.tb_member_info where member_uid = b.UPPER_MEMBER_UID) as manager_nm
+					, b.MEMBER_UID
+				FROM shfda.tb_SCH_CNSR a 
+					LEFT OUTER JOIN shfda.tb_MEMBER_INFO b ON (a.MEMBER_UID = b.MEMBER_UID)
+				WHERE 
+					a.CNS_POSSIBLE_YN = 'Y'
+					AND to_date(a.SCH_DATE, 'yyyymmdd') = trunc(sysdate)
+					AND	b.VALID_YN = 'Y'
+					AND b.LEAVE_YN = 'N'
+					AND b.DEPART_CD = #{departCd} 
+				order by a.member_uid asc
+				) t
+	</select>
+	
+	<!-- 상담관리 대시보드	 Today 요약 첫번째 줄 -->
+	<select id="selectTodayTotalReport" resultType="CMap">
+		/* report.selectTodayTotalReport */
+		select
+			(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= trunc(sysdate)
+					and cnsr_div_cd = 'C'
+					and depart_cd = #{departCd}  
+			) as total_cns -- 전체상담
+			,(
+				select count(*)
+				from shfda.tb_chat_room b
+				where b.cnsr_div_cd = 'C' 
+					AND b.room_create_dt >= trunc(sysdate)
+					and b.end_yn = 'Y' 
+					AND b.END_DIV_CD = 'COUNSELOR_POOL_OVER' 
+					and b.depart_cd = #{departCd} 
+			) AS default_busy_end
+			,(
+				select count(*)
+				from shfda.tb_chat_room b
+				where b.cnsr_div_cd = 'C' 
+					AND b.room_create_dt >= trunc(sysdate)
+					and b.end_yn = 'Y' 
+					AND b.END_DIV_CD = 'CENTER_OFF_DUTY' 
+					and b.depart_cd = #{departCd} 
+			) AS default_disable_end
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					end_div_cd = 'C_CSTM_WAIT_CNSR'
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as quit_b_cnt     -- 상담포기(배정후)
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					end_div_cd = 'C_CSTM_ASSIGN_CNSR'
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as quit_a_cnt     -- 상담포기(배정후)
+			,(
+				select count(*) from shfda.tb_chat_room
+				where
+					cnsr_div_cd = 'C'
+					and chat_room_status_cd in ('31', '41', '51','61')
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as prsc_cns -- 상담원_상담진행
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					cnsr_div_cd = 'C'
+					and end_yn = 'Y'
+					and room_create_dt >= trunc(sysdate)
+					and end_div_cd not in( 'C_CSTM_ASSIGN_CNSR', 'C_CSTM_WAIT_CNSR',  'COUNSELOR_POOL_OVER' , 'CENTER_OFF_DUTY' )
+					and TO_NUMBER(member_uid) <![CDATA[<]]> 9999999991  
+					and depart_cd = #{departCd} 
+			) as end_cns -- 상담종료
+			,(
+				select count(*) from shfda.tb_chat_room
+				where
+					end_div_cd in ('C_TIME','C_BAT')
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as auto_end   -- 자동종료
+			,(
+				select count(*) from shfda.tb_chat_room
+				where
+					cnsr_div_cd = 'C'
+					and end_div_cd = 'C_CSTM'
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as cstm_end
+			,(
+				select count(*) from shfda.tb_chat_room
+				where
+					cnsr_div_cd = 'C'
+					and end_div_cd = 'C_CNSR'
+					and room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd} 
+			) as cnsr_end
+			, (
+				SELECT 
+					CASE WHEN nvl(floor(sum_sec/86400),0) > 0 THEN nvl(floor(sum_sec/86400),0) || '일 ' END ||
+					CASE WHEN nvl(to_char(to_date(ceil(mod(sum_sec,86400)),'SSSSS'),'HH24'),0) > 0 THEN nvl(to_char(to_date(ceil(mod(sum_sec,86400)),'SSSSS'),'HH24'),0) || '시 ' END ||
+					CASE WHEN nvl(to_char(to_date(ceil(mod(sum_sec,86400)),'SSSSS'),'mi'),0) > 0 THEN nvl(to_char(to_date(ceil(mod(sum_sec,86400)),'SSSSS'),'mi'),0) || '분 ' END ||
+					nvl(to_char(to_date(ceil(mod(sum_sec,86400)),'SSSSS'),'ss'),0) || '초' 
+				FROM (
+					SELECT 
+						sum(
+							nvl(
+							(
+								TR.last_chat_dt - 
+								(
+									SELECT min(reg_dt) 
+									FROM shfda.tb_CHAT ct 
+									WHERE ct.CHAT_ROOM_UID = tr.CHAT_ROOM_UID AND ct.SENDER_DIV_CD = 'C' AND ct.CNSR_MEMBER_UID = tr.MEMBER_UID 
+									GROUP BY ct.CHAT_ROOM_UID
+								)
+							)*86400
+							,0)
+						)  / count(1) AS sum_sec
+						FROM shfda.tb_CHAT_ROOM tr
+						WHERE tr.END_YN = 'Y' 
+						AND room_create_dt >= trunc(SYSDATE)
+						AND room_create_dt <![CDATA[<]]> trunc(SYSDATE) + 1
+						AND DEPART_CD = #{departCd} 
+						and cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+						and TO_NUMBER(member_uid) <![CDATA[<]]> 9999999991  
+					 
+				)
+			)	as total_avg_talk_time
+			,(
+				SELECT round(nvl(sum(c.EVL_SCORE) / count(c.CHAT_ROOM_UID), 0), 1)
+				FROM shfda.tb_CNS_EVL c, shfda.tb_CHAT_ROOM d 
+				WHERE 
+					c.CHAT_ROOM_UID = d.CHAT_ROOM_UID 
+					AND d.chat_room_status_cd = '91' 
+					AND d.room_create_dt > TRUNC(sysdate) 
+					AND d.DEPART_CD = #{departCd} 
+			) as total_avg_elv_score
+			, (
+				SELECT count(*)
+				FROM shfda.tb_CNS_EVL c, shfda.tb_CHAT_ROOM d 
+				WHERE 
+					c.CHAT_ROOM_UID = d.CHAT_ROOM_UID 
+					AND d.chat_room_status_cd = '91' 
+					AND d.room_create_dt > TRUNC(sysdate) 
+					AND d.DEPART_CD = #{departCd} 
+			) as total_elv_cnt
+		from dual
+	</select>
+	
+	<!-- 상담관리 대시보드	 Today 요약	흥국체팅 / 네이버톡 / 카카오톡-->
+	<select id="selectLinkDivReport" resultType="CMap">
+		/* report.selectLinkDivReport */
+		select
+			(
+				select count(*) from shfda.tb_chat_room
+				where
+					room_create_dt >= trunc(sysdate)
+					and depart_cd = #{departCd}  
+			) as bot_throu_cnt
+			,(
+				SELECT count(a.CHAT_ROOM_UID)
+				FROM
+					(SELECT CHAT_ROOM_UID, count(*) AS bot_q_cnt FROM shfda.tb_chat WHERE reg_dt >= trunc(sysdate) AND BOT_INTENT = 'SUBMIT_COUNSELOR' GROUP BY CHAT_ROOM_UID) a,
+					shfda.tb_CHAT_ROOM b
+				WHERE
+					a.CHAT_ROOM_UID=b.CHAT_ROOM_UID
+					and b.DEPART_CD = #{departCd} 
+			) as bot2cnsr_cnt
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= to_date(sysdate)
+					and end_yn = 'N'
+					and chat_room_status_cd = '11'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) AS total_ing_bot  -- 전체봇진행중
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= to_date(sysdate)
+					and end_yn = 'N'
+					and chat_room_status_cd = '11'
+					and member_uid = '9999999992'
+			) AS default_cnsr_cnt  -- 기본상담원 할당
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= to_date(sysdate)
+					and end_yn = 'Y'
+					and member_uid = '9999999992'
+			) AS default_end_cnt  -- 기본상담원 종료
+			,(
+				SELECT count(*) FROM shfda.tb_CHAT_ROOM 
+				WHERE room_end_dt > trunc(sysdate)
+				and member_uid in
+				<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+
+			) AS total_end_bot  -- 전체 봇 완료
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= trunc(sysdate)
+					and cstm_link_div_cd = 'A'
+					and chat_room_status_cd = '11'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) as web_ing_cnt			--웹 진행중
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_end_dt > trunc(sysdate)
+					and cstm_link_div_cd = 'A'
+					and END_YN = 'Y'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) AS web_end_cnt			--웹 종료
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= trunc(sysdate)
+					and end_yn = 'N'
+					and cstm_link_div_cd = 'C'
+					and chat_room_status_cd = '11'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) as naver_ing_cnt      --네이버 진행중
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_end_dt > trunc(sysdate)
+					and end_yn = 'Y'
+					and cstm_link_div_cd = 'C'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) AS naver_end_cnt -- 네이버 종료
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_create_dt >= trunc(sysdate)
+					and end_yn = 'N'
+					and cstm_link_div_cd = 'B'
+					and chat_room_status_cd = '11'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+
+			) as kakao_ing_cnt    -- 카카카오 진행중
+			,(
+				select count(*)
+				from shfda.tb_chat_room
+				where
+					room_end_dt > trunc(sysdate)
+					and cstm_link_div_cd = 'B'
+					AND end_yn = 'Y'
+					and member_uid in
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			) AS kakao_end_cnt		--카카오 종료
+		from dual
+	</select>
+	
+	<!-- 대시보드 분류별 후처리-->
+	<select id="selectCTGAfter" resultType="CMap">
+	/* report.selectCTGAfter */
+		SELECT ctg_nm_1, ctg_nm_2, count(*) as after_cnt
+		FROM (
+				 select 
+					case when g.ctg_num is null then 
+							DECODE(h.ctg_mgt_dpt, '2', f.ctg_nm, g.ctg_nm)
+						else 
+							DECODE(h.ctg_mgt_dpt, '2', g.ctg_nm, e.ctg_nm)
+						end				AS ctg_nm_1
+					,case when g.ctg_num is null then 
+							DECODE(h.ctg_mgt_dpt, '2', e.ctg_nm, f.ctg_nm)
+						else 
+							DECODE(h.ctg_mgt_dpt, '2', f.ctg_nm, g.ctg_nm)
+						end				AS ctg_nm_2
+					, a.CTG_NUM
+					, a.CHAT_ROOM_STATUS_CD
+					 
+				 from shfda.tb_chat_room a
+						left outer join shfda.tb_ctg_info e on (a.ctg_num = e.ctg_num)
+						left outer join shfda.tb_ctg_info f on (e.upper_ctg_num = f.ctg_num)
+						left outer join shfda.tb_ctg_info g on (f.upper_ctg_num = g.ctg_num)
+						LEFT OUTER JOIN shfda.tb_CHAT_END_INFO i ON (a.CHAT_ROOM_UID = i.CHAT_ROOM_UID)
+						inner join (select ctg_mgt_dpt
+									from shfda.tb_set
+									where rownum = 1) h on (1 = 1)
+				WHERE a.CHAT_ROOM_STATUS_CD = 91 and room_create_dt >= trunc(sysdate) and i.updater is not null
+				<if test="departCd != null">
+							and a.depart_cd = #{departCd}
+						</if>
+			 		) y
+			 group by ctg_nm_2 , ctg_nm_1
+			 ORDER BY ctg_nm_1, ctg_nm_2					
+	</select>
+	
+	<!-- 기간계 호출-->
+	<select id="selectMCICnt" resultType="CMap">
+		/* report.selectMCICnt */
+		SELECT 
+			shfda.fn_getCodeNm('SERVICE_ID', INTERFACE_ID) AS service_name
+			, auth_type_name
+			, sum(totalcnt)				AS total_cnt
+			, sum(CSTM_CNT)		AS cstm_cnt
+			, round(sum(TOTALCNT) / sum(CSTM_CNT), 1) 				AS avg_cnt
+			, INTERFACE_ID
+			, g.AUTH_POSITION AS from_home
+		FROM
+		(
+			SELECT 
+ 				a.INTERFACE_ID AS INTERFACE_ID
+				, count(INTERFACE_ID) AS totalcnt
+				, count( DISTINCT a.CSTM_UID) AS cstm_cnt
+				, CASE WHEN INTERFACE_ID = 'CBOTINFR0000' THEN shfda.fn_getCodeNm('AUTH_TYPE_CD', a.AUTH_TYPE) ELSE null END AS auth_type_name
+				, CASE WHEN a.AUTH_POSITION = 'H' THEN '홈페이지'
+						WHEN a.AUTH_POSITION = 'C' THEN '챗봇'
+						WHEN a.AUTH_POSITION = 'T' THEN '채팅'
+						ELSE '-' END AS AUTH_POSITION
+			from shfda.tb_hk_mci_logs a
+				LEFT OUTER JOIN shfda.tb_chat_room b ON (a.ROOM_ID = b.CHAT_ROOM_UID)
+			WHERE 
+				a.rescd = '0000'
+				AND a.AUTH_TYPE IS NOT null 
+				AND a.REQDT >= trunc(sysdate) 
+				AND b.DEPART_CD = #{departCd}
+				
+			GROUP BY a.INTERFACE_ID, a.CSTM_UID, a.ROOM_ID, a.auth_type, a.auth_position
+		) g
+		GROUP BY INTERFACE_ID, auth_type_name,AUTH_POSITION
+		ORDER BY INTERFACE_ID, auth_type_name
+	</select>
+	
+	
+	
+	
+	
+	
+	
+
+	
+	
+
+	<!-- admin(서비스설정) 대시보드	카테고리별 -->
+	<select id="selectCtgReport" resultType="CMap">
+		/* report.selectCtgReport */
+		select
+			t3.ctg_nm
+			,nvl(t1.cnt,0) ||'/'||nvl (t2.cnt,0) as cnt
+		from
+		(
+			select
+				c.ctg_num
+				,c.ctg_nm
+				,count(*) as cnt
+			from
+				shfda.tb_ctg_info a
+				,shfda.tb_ctg_info b
+				,shfda.tb_ctg_info c
+				,shfda.tb_chat_room d
+			where a.upper_ctg_num = b.ctg_num(+)
+				and b.upper_ctg_num = c.ctg_num(+)
+				and b.ctg_num = d.ctg_num
+				and d.room_create_dt >= trunc(sysdate)
+				and d.cnsr_div_cd = 'C'
+				and a.del_yn = 'N'
+				and b.del_yn = 'N'
+				and c.del_yn = 'N'
+			group by c.ctg_num, c.ctg_nm
+		) t1
+		,
+		(
+		select
+			c.ctg_num
+			,c.ctg_nm
+			,count(*) as cnt
+		from
+			shfda.tb_ctg_info a
+			,shfda.tb_ctg_info b
+			,shfda.tb_ctg_info c
+			,shfda.tb_chat_room d
+		where a.upper_ctg_num = b.ctg_num(+)
+			and b.upper_ctg_num = c.ctg_num(+)
+			and b.ctg_num = d.ctg_num
+			and d.room_end_dt >= trunc(sysdate)
+			and d.cnsr_div_cd = 'C'
+			and a.del_yn = 'N'
+			and b.del_yn = 'N'
+			and c.del_yn = 'N'
+			and d.depart_cd = #{departCd} 
+		group by c.ctg_num, c.ctg_nm
+		) t2
+		,shfda.tb_ctg_info t3
+		where t3.ctg_num = t1.ctg_num(+)
+			and t3.ctg_num = t2.ctg_num(+)
+			and t3.del_yn = 'N'
+			and t3.use_yn = 'Y'
+			and t3.ctg_dpt = 1
+	</select>
+
+	<!-- manager(상담관리) 대시보드	월별 서비스 상태 흥국체팅 / 네이버톡 / 카카오톡-->
+	<select id="selectMonthlyLinkDivReport" resultType="CMap">
+		/* report.selectMonthlyLinkDivReport */
+		select
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		(
+		room_create_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		or room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		)
+		and cnsr_div_cd = 'C'
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		and cstm_link_div_cd = 'A')||'/'||
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		and cnsr_div_cd = 'C'
+		and cstm_link_div_cd = 'A'
+		) AS web_cnt
+		,
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		(
+		room_create_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		or room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		)
+		and cnsr_div_cd = 'C'
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		and cstm_link_div_cd = 'C')||'/'||
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		and cnsr_div_cd = 'C'
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		and cstm_link_div_cd = 'C'
+		) AS naver_cnt -- 네이버
+		,
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		(
+		room_create_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		or room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		)
+		and cnsr_div_cd = 'C'
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		and cstm_link_div_cd = 'B')||'/'||
+		(
+		select count(*)
+		from shfda.tb_chat_room
+		where
+		room_end_dt >= to_date(to_char(sysdate,'yyyymm')||'01','yyyymmdd')
+		and cnsr_div_cd = 'C'
+		and cstm_link_div_cd = 'B'
+		<if test="memberDivCd eq 'M'.toString()">
+			and manager_uid = #{member_uid}
+		</if>
+		) AS kakao_cnt --카카오
+		from dual
+	</select>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ************************* 통계 일배치 저장 쿼리 시작 *********************************** -->
+	<insert id="insertStatsDate">
+		/* report.insertStatsDate  -- 부서코드 추가, 시작일->종료일 변경 20191112 -- Q */
+		insert into shfda.tb_STATS_DATE
+		( STATS_NUM
+		, REG_DATE
+		, REG_DAYCOUNT
+		, CNSR_DIV_CD
+		, CSTM_LINK_DIV_CD
+		, CNS_REQUEST_CNT
+		, CNS_END_CNT
+		, EVL_END_TIME
+		, CNSR_CNT
+		, CREATE_DT
+		, DEPART_CD
+		, CNS_END_AUTO
+		, CNS_END_CSTM
+		, CNS_END_CNSR
+		, CNS_QUIT_CNT
+		, CNS_BQUIT_CNT
+		, SYS_FULL_CNT
+		, OUT_SERVICE_CNT
+		)
+		select shfda.seq_DATE_STATS_NUM.nextval
+			 , reg_date
+			 , reg_daycount
+			 , cnsr_div_cd
+			 , cstm_link_div_cd
+			 , cns_request_cnt
+			 , cns_end_cnt
+			 , evl_end_time
+			 , cnsr_cnt
+			 , create_dt
+			 , depart_cd
+			 , CNS_END_AUTO
+			, CNS_END_CSTM
+			, CNS_END_CNSR
+			, CNS_QUIT_CNT	
+			, WAIT_END_CSTM
+			, SYS_FULL_CNT
+			, OUT_SERVICE_CNT
+		from (
+				 select 
+					#{regDate}																	as reg_date
+					, case to_char(to_date(#{regDate}, 'yyyymmdd'), 'd')
+						when '1' then '일요일'
+						when '2' then '월요일'
+						when '3' then '화요일'
+						when '4' then '수요일'
+						when '5' then '목요일'
+						when '6' then '금요일'
+						when '7' then '토요일'
+					end																				as reg_daycount
+					, a.cnsr_div_cd																AS CNSR_DIV_CD
+					, a.cstm_link_div_cd														as cstm_link_div_cd
+					, count( 1)																	as cns_request_cnt
+					, sum(
+						CASE 
+							WHEN a.END_DIV_CD IN ('C_TIME' , 'C_BAT', 'C_CSTM', 'C_CNSR') 
+							THEN 1 end
+					) 		as cns_end_cnt
+					, sum(nvl((a.last_chat_dt - 
+							nvl((SELECT min(reg_dt) FROM shfda.tb_CHAT ct WHERE ct.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND ct.SENDER_DIV_CD = 'C' AND ct.CNSR_MEMBER_UID = a.MEMBER_UID GROUP BY ct.CHAT_ROOM_UID), a.ROOM_CREATE_DT)
+						)*86400,0))					  															as evl_end_time
+					, (SELECT COUNT(DISTINCT m.MEMBER_UID )
+			 			FROM shfda.tb_CHAT_ROOM m 
+			 				WHERE m.room_end_dt >= to_date(#{regDate}, 'yyyymmdd') and m.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1 
+				 			AND m.DEPART_CD = #{departCd}
+				 			AND m.CNSR_DIV_CD = 'C'
+				 			AND m.END_YN = 'Y'
+				 			AND TO_NUMBER(m.MEMBER_UID) <![CDATA[<]]> '9999999991')    										 												as cnsr_cnt
+					, sysdate																																				as create_dt
+					, #{departCd} 																																			AS depart_cd
+			 		, count(CASE WHEN a.END_DIV_CD IN ('C_TIME', 'C_BAT') THEN 1 end) AS CNS_END_AUTO
+			 		, count(CASE a.END_DIV_CD WHEN 'C_CSTM' THEN 1 end) AS CNS_END_CSTM
+			 		, count(CASE a.END_DIV_CD WHEN 'C_CNSR' THEN 1 end) AS CNS_END_CNSR
+			 		, count(CASE a.END_DIV_CD WHEN 'C_CSTM_WAIT_CNSR' THEN 1 end) AS WAIT_END_CSTM
+			 		, count(CASE a.END_DIV_CD WHEN 'C_CSTM_ASSIGN_CNSR' THEN 1 end) AS cns_quit_cnt
+			 		, count(CASE WHEN a.END_DIV_CD = 'COUNSELOR_POOL_OVER' THEN 1 end) AS SYS_FULL_CNT
+			 		, count(CASE WHEN a.END_DIV_CD = 'CENTER_OFF_DUTY' THEN 1 end) AS OUT_SERVICE_CNT
+				 from shfda.tb_chat_room a
+				 where 
+				 	a.room_end_dt >= to_date(#{regDate}, 'yyyymmdd') and a.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1 
+				 	and a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+				 	AND a.DEPART_CD = #{departCd}
+				 	AND a.END_YN = 'Y'
+					AND a.END_DIV_CD NOT in ('B_TIME', 'B_CSTM')
+					
+				 group by a.cnsr_div_cd, a.cstm_link_div_cd
+			 )
+	</insert>
+	<delete id="deleteStatsDate">
+		delete from shfda.tb_STATS_DATE where REG_DATE = #{regDate}
+	</delete>
+	<insert id="insertStatsCnsr">
+		/* report.insertStatsCnsr  -- 부서코드 추가, 시작일->종료일 변경 20191112 -- Q*/
+		insert into shfda.tb_STATS_CNSR
+		( STATS_NUM
+		, REG_DATE
+		, REG_DAYCOUNT
+		, MEMBER_UID
+		, ID
+		, NAME
+		, WORK_YN
+		, CNS_REQUEST_CNT
+		, CNS_END_CNT
+		, EVL_END_TIME
+		, EVL_CNT
+		, EVL_EVL_SCORE
+		, CREATE_DT
+		, DEPART_CD
+		, AFTER_CNT
+		)
+		select shfda.seq_CNST_STATS_NUM.nextval
+			 , reg_date
+			 , reg_daycount
+			 , member_uid
+			 , id
+			 , name
+			 , '1' as work_yn
+			 , cns_request_cnt
+			 , cns_end_cnt
+			 , evl_end_time
+			 , evl_cnt
+			 , evl_evl_score
+			 , create_dt
+			 , depart_cd 
+			 , after_cnt
+		from (
+				 select #{regDate}                                    as reg_date
+					  , case to_char(to_date(#{regDate}, 'yyyymmdd'), 'd')
+							when '1' then '일요일'
+							when '2' then '월요일'
+							when '3' then '화요일'
+							when '4' then '수요일'
+							when '5' then '목요일'
+							when '6' then '금요일'
+							when '7' then '토요일'
+					 end													as reg_daycount
+					  , a.member_uid									as member_uid
+					  , max(b.id)										as id
+					  , max(b.name)									as name
+					  , a.cnsr_div_cd
+					  , count(1)											as cns_request_cnt
+					  , sum(decode(a.end_yn, 'Y', 1, 0))			as cns_end_cnt
+					  , round(sum((a.LAST_CHAT_DT - (SELECT min(REG_DT) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR')) * 86400) , 1) as evl_end_time
+					  , count(distinct a.member_uid)				as cnsr_cnt
+					  , count(CASE WHEN c.EVL_NUM IS NOT NULL THEN 1 end)					as evl_cnt
+					  , round(sum(nvl(c.evl_score, 0)), 1) as evl_evl_score
+					  , sysdate											as create_dt
+					  , a.DEPART_CD										as depart_cd
+					  , sum(CASE WHEN e.UPDATER IS NOT NULL THEN 1 ELSE 0 end) AS after_cnt
+				 from shfda.tb_chat_room a
+						  inner join shfda.tb_member_info b on (a.member_uid = b.member_uid)
+						  LEFT OUTER JOIN shfda.tb_CHAT_END_INFO e ON (a.CHAT_ROOM_UID = e.CHAT_ROOM_UID)
+						  left outer join shfda.tb_cns_evl c on (a.chat_room_uid = c.chat_room_uid)
+				 where a.room_end_dt >= to_date(#{regDate}, 'yyyymmdd') and a.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1  
+				 	and a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+				 group by a.cnsr_div_cd, a.member_uid, a.DEPART_CD
+			 )
+</insert>
+	<delete id="deleteStatsCnsr">
+		delete from shfda.tb_STATS_CNSR where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	<insert id="insertStatsTime">
+		/* report.insertStatsTime  -- 부서코드 추가, 시작일->종료일 변경 20191112 -- Q*/
+		INSERT INTO shfda.tb_stats_time
+		( STATS_NUM
+		, REG_DATE
+		, REG_TIME
+		, REG_DAYCOUNT
+		, CNSR_DIV_CD
+		, CSTM_LINK_DIV_CD
+		, CNS_REQUEST_CNT
+		, CNS_END_CNT
+		, EVL_END_TIME
+		, CNSR_CNT
+		, CREATE_DT
+		, DEPART_CD
+		, CNS_QUIT_CNT
+		, CNS_BQUIT_CNT
+		, AFTER_CNT
+		, SYS_FULL_CNT
+		, OUT_SERVICE_CNT
+		)
+		select shfda.seq_TIME_STATS_NUM.nextval
+			 , reg_date
+			 , reg_time
+			 , reg_daycount
+			 , cnsr_div_cd
+			 , cstm_link_div_cd
+			 , cns_request_cnt
+			 , cns_end_cnt
+			 , evl_end_time
+			 , cnsr_cnt
+			 , create_dt
+			 , depart_cd
+			 , cns_quit_cnt			
+			 , cns_bquit_cnt
+			 , after_yn	
+			 , SYS_FULL_CNT
+			 , OUT_SERVICE_CNT
+		from (
+				 select 
+					#{regDate}									as reg_date
+					, reg_time
+					, case to_char(to_date(#{regDate}, 'yyyymmdd'), 'd')
+							when '1' then '일요일'
+							when '2' then '월요일'
+							when '3' then '화요일'
+							when '4' then '수요일'
+							when '5' then '목요일'
+							when '6' then '금요일'
+							when '7' then '토요일'
+					end											as reg_daycount
+					, a.cnsr_div_cd
+					, a.cstm_link_div_cd
+					, count(*)			AS cns_insert_cnt
+					, sum(CASE WHEN DEPART_CD = #{departCd} THEN 1 ELSE 0 END )												as cns_request_cnt
+					, sum(
+						CASE 
+							WHEN a.END_DIV_CD NOT IN ('C_CSTM_WAIT_CNSR' , 'C_CSTM_ASSIGN_CNSR', 'COUNSELOR_POOL_OVER', 'CENTER_OFF_DUTY') 
+							THEN 1 ELSE 0 end
+					)												as cns_end_cnt
+					, sum( (a.last_chat_dt - fst_chat_dt) * 86400) 		as evl_end_time
+					, sysdate																					as create_dt
+					, #{departCd}																			as depart_cd
+					, count(CASE a.END_DIV_CD WHEN 'C_CSTM_WAIT_CNSR' THEN 1 end) AS cns_bquit_cnt
+			 		, count(CASE a.END_DIV_CD WHEN 'C_CSTM_ASSIGN_CNSR' THEN 1 end) AS cns_quit_cnt
+			 		, count(CASE WHEN a.END_DIV_CD = 'COUNSELOR_POOL_OVER' THEN 1 end) AS SYS_FULL_CNT
+			 		, count(CASE WHEN a.END_DIV_CD = 'CENTER_OFF_DUTY' THEN 1 end) AS OUT_SERVICE_CNT
+			 		, count(DISTINCT(a.MEMBER_UID)) AS cnsr_cnt
+			 		, count(aft_yn) AS after_yn
+				from (
+						SELECT
+							CASE WHEN to_char(room_end_dt, 'hh24:mi:ss') = '00:00:00' THEN '24' ELSE to_char(room_end_dt, 'hh24') end as reg_time  /*시간대*/
+							, t.CNSR_DIV_CD AS CNSR_DIV_CD
+							, t.CSTM_LINK_DIV_CD
+							, t.END_YN
+							, t.LAST_CHAT_DT
+							, e.reg_dt AS fst_chat_dt					
+							, CASE WHEN TO_NUMBER(t.member_uid) <![CDATA[<]]>  '9999999991' THEN t.member_uid END  	AS MEMBER_UID
+							, t.END_DIV_CD AS END_DIV_CD
+							, t.DEPART_CD AS DEPART_CD
+							, (SELECT 1 FROM shfda.tb_CHAT_END_INFO WHERE CHAT_ROOM_UID = t.CHAT_ROOM_UID AND UPDATE_DT IS NOT NULL ) AS aft_yn
+						from shfda.tb_chat_room t
+								LEFT OUTER JOIN 
+							(SELECT min(tb.REG_DT) AS reg_dt, tb.CHAT_ROOM_UID FROM shfda.tb_chat tb WHERE tb.BOT_INTENT = 'ASSIGN_COUNSELOR' GROUP BY tb.CHAT_ROOM_UID) e 
+							ON (t.CHAT_ROOM_UID = e.CHAT_ROOM_UID)
+						where 
+							t.room_end_dt > to_date(#{regDate}, 'yyyymmdd') and t.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') +1
+							 and t.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+							AND t.DEPART_CD = #{departCd}
+							AND t.END_DIV_CD NOT in ('B_TIME', 'B_CSTM')
+					  ) a
+				 group by a.cnsr_div_cd, a.cstm_link_div_cd, reg_time
+			 )
+	</insert>
+	<delete id="deleteStatsTime">
+		delete from shfda.tb_stats_time where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+
+	<insert id="insertStatsCnsrTime">
+		/* report.insertStatsCnsrTime -- 부서코드 추가, 시작일->종료일 변경 20191112 -- Q*/
+		insert into shfda.tb_STATS_CNSR_TIME
+		( STATS_NUM
+		, REG_DATE
+		, REG_TIME
+		, REG_DAYCOUNT
+		, MEMBER_UID
+		, ID
+		, NAME
+		, WORK_YN
+		, CNS_REQUEST_CNT
+		, CNS_END_CNT
+		, EVL_END_TIME
+		, EVL_CNT
+		, EVL_EVL_SCORE
+		, CREATE_DT
+		, DEPART_CD)
+		select shfda.seq_CNST_TIME_STATS_NUM.nextval
+			 , reg_date
+			 , reg_time
+			 , reg_daycount
+			 , member_uid
+			 , id
+			 , name
+			 , '1' as work_yn
+			 , cns_request_cnt
+			 , cns_end_cnt
+			 , evl_end_time
+			 , evl_cnt
+			 , evl_evl_score
+			 , create_dt
+			 , depart_cd
+		from (
+				 select #{regDate}											as reg_date
+					  , a.reg_time
+					  , case to_char(to_date(#{regDate}, 'yyyymmdd'), 'd')
+							when '1' then '일요일'
+							when '2' then '월요일'
+							when '3' then '화요일'
+							when '4' then '수요일'
+							when '5' then '목요일'
+							when '6' then '금요일'
+							when '7' then '토요일'
+					 end														as reg_daycount
+					  , a.member_uid
+					  , max(b.id)											as id
+					  , max(b.name)										as name
+					  , count(1)												as cns_request_cnt
+					  , sum(
+						CASE 
+							WHEN a.END_DIV_CD NOT IN ('C_CSTM_WAIT_CNSR' , 'C_CSTM_ASSIGN_CNSR', 'COUNSELOR_POOL_OVER', 'CENTER_OFF_DUTY') 
+							THEN 1 ELSE 0 end
+					)						as cns_end_cnt
+					  , round(sum((a.LAST_CHAT_DT - (SELECT min(REG_DT) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR')) * 86400) / count(1), 1)					as evl_end_time
+					  , count(CASE WHEN c.EVL_NUM IS NOT NULL THEN 1 end)					as evl_cnt
+					  , round(sum(nvl(c.evl_score, 0)), 1) as evl_evl_score
+					  , sysdate												as create_dt
+					  , a.depart_cd											as depart_cd
+				 from (
+						  select a.*, to_char(room_create_dt, 'hh24') as reg_time
+						  from shfda.tb_chat_room a
+						  where a.room_create_dt > to_date(#{regDate}, 'yyyymmdd') and a.room_create_dt <![CDATA[<]]>= to_date(#{regDate}, 'yyyymmdd') + 1
+						  		and a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+					  ) a
+						  inner join shfda.tb_member_info b on (a.member_uid = b.member_uid)
+						  left outer join shfda.tb_cns_evl c on (a.chat_room_uid = c.chat_room_uid)
+				 group by a.cnsr_div_cd, a.member_uid, a.reg_time, a.depart_cd
+			 )
+	</insert>
+	<delete id="deleteStatsCnsrTime">
+		delete from shfda.tb_STATS_CNSR_TIME where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+
+	<insert id="insertStatsCtgDate">
+		/* report.insertStatsCtgDate -- 부서코드 추가, 시작일->종료일 변경 20191112 -- Q  */
+		INSERT INTO shfda.tb_STATS_CTG_DATE
+		( STATS_NUM
+		, REG_DATE
+		, CTG_NUM
+		, CNSR_DIV_CD
+		, CSTM_LINK_DIV_CD
+		, CNS_REQUEST_CNT
+		, CNS_END_CNT
+		, EVL_END_TIME
+		, CNSR_CNT
+		, CREATE_DT
+		, DEPART_CD
+		, TOTAL_SCORE
+		, EVL_CNT)
+		select shfda.seq_CTG_DATE_STATS_NUM.nextval
+			 , reg_date
+			 , ctg_num
+			 , cnsr_div_cd
+			 , cstm_link_div_cd
+			 , cns_request_cnt
+			 , cns_end_cnt
+			 , evl_end_time
+			 , cnsr_cnt
+			 , create_dt
+			 , depart_cd
+			 , total_score
+			 , evl_cnt
+		from (
+			select 
+				#{regDate}					as reg_date
+				, a.ctg_num
+				, a.cnsr_div_cd
+				, a.cstm_link_div_cd
+				, count(1)					as cns_request_cnt
+				, sum(decode(a.end_yn, 'Y', 1, 0))	as cns_end_cnt
+				, round(sum((a.LAST_CHAT_DT - (SELECT min(REG_DT) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR')) * 86400) / count(1), 1)  as evl_end_time
+				, count(distinct a.member_uid)	as cnsr_cnt
+				, sysdate					as create_dt
+				, a.depart_cd					as depart_cd 
+				, nvl(sum(b.EVL_SCORE), 0) AS total_score
+				, count(b.EVL_NUM) AS evl_cnt
+			 from shfda.tb_chat_room a
+			   LEFT OUTER JOIN (
+					  	SELECT DEPART_CD, count(DISTINCT member_uid ) AS cnsr_cnt FROM shfda.tb_CHAT_ROOM 
+					  	WHERE room_end_dt > to_date(#{regDate}, 'yyyymmdd') and room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') +1
+							 and cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+							
+							GROUP BY depart_cd
+					  ) ct ON (a.DEPART_CD = ct.DEPART_CD)
+			 left outer join shfda.tb_CNS_EVL b on ( a.CHAT_ROOM_UID = b.CHAT_ROOM_UID )
+			 where a.room_end_dt > to_date(#{regDate}, 'yyyymmdd') and a.room_end_dt <![CDATA[<]]>= to_date(#{regDate}, 'yyyymmdd') + 1 and a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+			 
+			 group by a.cnsr_div_cd, a.cstm_link_div_cd, a.ctg_num, a.depart_cd
+			 )
+	</insert>
+	<delete id="deleteStatsCtgDate">
+		delete from shfda.tb_STATS_CTG_DATE where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+
+	<insert id="insertStatsRobot">
+		/* report.insertStatsRobot -- 시작일->종료일 변경 20191112 -- Q */
+		insert into shfda.tb_stats_robot			( 
+			STATS_NUM
+			, BOT_PROJECT_ID
+			, REG_DATE
+			, CSTM_DIV_CD
+			, CSTM_DIV_NM
+			, CTG_NM
+			, CTG_NUM
+			, CNS_REQUEST_CNT
+			, CNSR_REQ_CNT
+			, ROBOT_END_CNT
+			, CHAT_CNT
+			, NO_MAT_CNT
+			, EVL_CNT
+			, CREATE_DT
+			, cstm_link_div_cd)
+			select 
+				shfda.seq_ROBOT_STATS_NUM.NEXTVAL
+				, BOT_PROJECT_ID
+				, REG_DATE
+				, CSTM_DIV_CD
+				, CSTM_DIV_NM
+				, CTG_NM
+				, CTG_NUM
+				, CNS_REQUEST_CNT
+				, CNSR_REQ_CNT
+				, ROBOT_END_CNT
+				, CHAT_CNT
+				, NO_MAT_CNT
+				, EVL_CNT
+				, sysdate
+				, cstm_link_div_cd
+			from 
+			(
+				select 
+					t1.reg_date
+					, t1.BOT_PROJECT_ID
+					, t1.cstm_div_cd
+					, (	select cd_nm from shfda.tb_cd where cd_group = 'CSTM_DIV_CD' and cd = t1.cstm_div_cd)			as cstm_div_nm
+					, t1.ctg_num
+					, t1.ctg_nm
+					, count(*)																												as cns_request_cnt
+					, sum(case when cnsr_div_cd = 'C' and FRT_CNSR_DIV_CD = 'R' then 1 else 0 end)				as cnsr_req_cnt
+					, sum(case when cnsr_div_cd = 'R' and end_yn = 'Y' then 1 else 0 end)								as robot_end_cnt
+					, sum(chat_cnt)																										as chat_cnt
+					, sum(no_mat_cnt)																									as no_mat_cnt
+					, sum(evl_cnt)																											as evl_cnt
+					, cstm_link_div_cd																										as cstm_link_div_cd
+					, sum(revisit_cnt)
+					, sum(newvisit_cnt)
+				from (
+					select 
+						tcr.chat_room_uid
+						, tcr.cstm_uid
+						, tcci.cstm_div_cd
+						, tcr.end_yn
+						, to_char(tcr.room_end_dt, 'yyyymmdd') as reg_date
+						, tcr.bot_project_id
+						, tcr.ctg_num
+						, tci.ctg_nm
+						, tcr.FRT_CNSR_DIV_CD
+						, tcr.cnsr_div_cd
+						, tcr.cstm_link_div_cd
+						, (
+								select count(*)
+								from shfda.tb_chat
+								where 
+									chat_room_uid = tcr.chat_room_uid
+									and CNSR_MEMBER_UID IN
+									<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+										#{item}
+									</foreach>
+							)																														as chat_cnt
+					,0																						as no_mat_cnt
+					, (
+						select count(*)
+						from shfda.tb_cns_evl
+						where chat_room_uid = tcr.chat_room_uid
+					)																												as evl_cnt	
+					, (
+							SELECT count(*) AS revisit_cnt FROM 
+ 							(
+								SELECT 	count(rb.CSTM_UID) as visit_cnt
+								FROM 
+								(
+									SELECT DISTINCT CSTM_UID FROM shfda.tb_CHAT_ROOM 
+									WHERE room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1 and room_end_dt >= to_date(#{regDate}, 'yyyymmdd')
+									 and cstm_link_div_cd = #{cstmLinkCd} GROUP BY CSTM_UID
+								) ra
+								, shfda.tb_CHAT_ROOM rb
+								WHERE ra.CSTM_UID = rb.CSTM_UID  and rb.cstm_link_div_cd = #{cstmLinkCd} 
+										AND rb.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 365 and rb.room_end_dt >= to_date(#{regDate}, 'yyyymmdd')
+								GROUP BY ra.CSTM_UID
+							) rv
+							WHERE rv.visit_cnt > 1
+						) as revisit_cnt
+					, (
+							SELECT count(*) AS newvisit_cnt FROM 
+ 							(
+								SELECT 	count(rb.CSTM_UID) as visit_cnt
+								FROM 
+								(
+									SELECT DISTINCT CSTM_UID FROM shfda.tb_CHAT_ROOM 
+									WHERE room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1 
+									and room_end_dt >= to_date(#{regDate}, 'yyyymmdd') 
+									and cstm_link_div_cd = #{cstmLinkCd} 
+									GROUP BY CSTM_UID
+								) ra
+								, shfda.tb_CHAT_ROOM rb
+								WHERE ra.CSTM_UID = rb.CSTM_UID  and rb.cstm_link_div_cd = #{cstmLinkCd} 
+									AND rb.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 365 and rb.room_end_dt > to_date(#{regDate}, 'yyyymmdd')
+								GROUP BY ra.CSTM_UID
+							) rv
+							WHERE rv.visit_cnt <![CDATA[<]]>= 1
+						) as newvisit_cnt
+				from shfda.tb_chat_room tcr
+					, shfda.tb_chat_cstm_info tcci
+					, shfda.tb_ctg_info tci
+				where 
+					tcr.cstm_uid = tcci.cstm_uid
+					and tcr.ctg_num = tci.ctg_num
+					and tcr.cstm_link_div_cd = #{cstmLinkCd}
+					and tcr.FRT_CNSR_DIV_CD = 'R'
+					and tcr.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+					and to_char(tcr.room_end_dt, 'yyyymmdd') = #{regDate}
+			) t1
+			group by 
+			t1.reg_date
+				, t1.cstm_div_cd
+				, t1.ctg_num
+				, t1.ctg_nm
+				, t1.BOT_PROJECT_ID
+				, t1.cstm_link_div_cd
+	)
+	</insert>
+	<delete id="deleteStatsRobot">
+		delete from shfda.tb_stats_robot where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	<insert id="insertStatsLinkRobot">
+		/* report.insertStatsLinkRobot -- 시작일->종료일 변경 20191112 -- Q */
+	insert into shfda.tb_STATS_LINK_ROBOT
+	( STATS_NUM
+	, REG_DATE
+	, CNS_REQUEST_CNT
+	, CREATE_DT
+	, CSTM_LINK_DIV_CD
+	, CSTM_RE_VISIT
+	, CSTM_NEW_VISIT
+	, ROBOT_END_CNT
+	, ROBOT_USE_TIME
+	)SELECT 
+		shfda.seq_LINK_BOT_STATS_NUM.NEXTVAL
+		, rinfo.reg_date AS reg_date
+		, all_cnt AS CNS_REQUEST_CNT
+		, sysdate AS CREATE_DT
+		, CSTM_LINK_DIV_CD
+		, re_visit_cnt AS CSTM_RE_VISIT
+		, new_visit_cnt AS CSTM_NEW_VISIT
+		, bot_use_cnt AS ROBOT_END_CNT
+		, r_use_time  AS ROBOT_USE_TIME
+	FROM (
+		select 
+			 #{regDate} as REG_DATE
+			, count(*) AS all_cnt
+			, #{cstmLinkCd} as cstm_link_div_cd
+			, count(use_bot_yn)	AS bot_use_cnt
+			, SUM(use_time)	AS r_use_time
+		from 
+			(
+				select 
+					#{regDate} AS reg_date
+					, cstm_link_div_cd
+				  	, (
+						(SELECT max(reg_dt) AS end_chatbot_dt FROM shfda.tb_chat WHERE bot_intent = 'END_CHATBOT' AND CHAT_ROOM_UID= tcr.CHAT_ROOM_UID)
+						- tcr.ROOM_CREATE_DT
+					) * 86400				  		AS use_time 
+				  	, (SELECT CASE WHEN count(*) > 0 then 'Y' END  FROM shfda.tb_chat tc WHERE tc.CHAT_ROOM_UID = tcr.CHAT_ROOM_UID AND tc.SENDER_DIV_CD = 'U' ) AS use_bot_yn
+				from  shfda.tb_chat_room tcr
+				where tcr.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+						AND ROOM_END_DT <![CDATA[<]]>= to_date(#{regDate}, 'yyyymmdd')+1 and ROOM_END_DT > to_date(#{regDate}, 'yyyymmdd')
+						and cstm_link_div_cd = #{cstmLinkCd}
+			)a
+		) rinfo
+		LEFT OUTER JOIN 
+		(
+			select 
+				 #{regDate} as REG_DATE
+				 , #{cstmLinkCd} as tmp
+				, count(*) AS all_visit_cnt
+				, count(CASE WHEN visit_cnt = '1' THEN 1 END ) AS new_visit_cnt
+				, count(CASE WHEN visit_cnt > '1' THEN 1 END ) AS re_visit_cnt
+			from 
+				(
+				SELECT 
+					DISTINCT(CSTM_UID) AS dis_cstm
+					, #{regDate} AS reg_date
+					, (
+						SELECT count(*) FROM shfda.tb_CHAT_ROOM cr WHERE cr.CSTM_UID = rv.CSTM_UID 
+						 		and cr.ROOM_END_DT <![CDATA[<]]>= to_date(#{regDate}, 'yyyymmdd')+1 and cr.ROOM_END_DT > to_date(#{regDate}, 'yyyymmdd')-366
+					) AS visit_cnt
+				FROM shfda.tb_CHAT_ROOM rv 
+				WHERE 
+					rv.ROOM_END_DT <![CDATA[<]]>= to_date(#{regDate}, 'yyyymmdd')+1 and rv.ROOM_END_DT > to_date(#{regDate}, 'yyyymmdd') 
+					AND rv.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+					and cstm_link_div_cd = #{cstmLinkCd}
+			)
+		) vinfo ON (rinfo.reg_date = vinfo.reg_date)
+
+	</insert>
+	<delete id="deleteStatsLinkRobot">
+		delete from shfda.tb_STATS_LINK_ROBOT where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	<insert id="insertStatsIntent">
+		/* report.insertStatsIntent  -- 시작일->종료일 변경 20191112 -- Q */
+		insert into shfda.tb_stats_intent
+		( STATS_NUM
+		, ROBOT_STATS_NUM
+		, BOT_CATEGORY_1
+		, BOT_CATEGORY_2
+		, BOT_CATEGORY_3
+		, BOT_INTENT
+		, REG_CNT
+		, CREATE_DT)
+		select shfda.seq_INTENT_STATS_NUM.NEXTVAL
+			 , ROBOT_STATS_NUM
+			 , BOT_CATEGORY_1
+			 , BOT_CATEGORY_2
+			 , BOT_CATEGORY_3
+			 , BOT_INTENT
+			 , REG_CNT
+			 , sysdate
+		from (
+				 select tsr.stats_num as robot_stats_num
+					  , tc.BOT_CATEGORY_1
+					  , tc.BOT_CATEGORY_2
+					  , tc.BOT_CATEGORY_3
+					  , tc.BOT_INTENT
+					  , count(*)      as reg_cnt
+				 from
+					shfda.tb_chat tc
+					, shfda.tb_stats_robot tsr
+					, (
+						select 
+							tcr.chat_room_uid
+							, tcr.bot_project_id
+							, tcr.ctg_num
+							, tcci.cstm_div_cd
+							, to_char(tcr.room_end_dt, 'yyyymmdd') as reg_date
+						from 
+							shfda.tb_chat_room tcr
+							, shfda.tb_chat_cstm_info tcci
+							, shfda.tb_ctg_info tci
+						where 
+							tcr.cstm_uid = tcci.cstm_uid
+							and tcr.ctg_num = tci.ctg_num
+							and tcr.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+							and to_char(tcr.room_end_dt, 'yyyymmdd') = #{regDate}
+				 ) t1
+				 where 
+					t1.ctg_num = tsr.ctg_num
+					and t1.reg_date = tsr.reg_date
+					and t1.cstm_div_cd = tsr.cstm_div_cd
+					and t1.bot_project_id = tsr.bot_project_id
+					and t1.chat_room_uid = tc.chat_room_uid
+					and tsr.reg_date = #{regDate}
+					and tc.CNSR_MEMBER_UID IN 
+					<foreach collection="botMemberUidList" item="item" open="(" separator="," close=")">
+										#{item}
+									</foreach>
+				 group by tsr.stats_num, tc.BOT_CATEGORY_1, tc.BOT_CATEGORY_2, tc.BOT_CATEGORY_3, tc.BOT_INTENT
+			 )
+	</insert>
+	
+	<delete id="deleteStatsIntent">
+		delete from shfda.tb_stats_intent where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	
+	<insert id="insertSQILIst">
+		/* report.insertSQILIst */
+		INSERT INTO shfda.tb_STATS_SQI 
+			(STATS_SQI_NUM
+			, MEMBER_UID
+			, CNSR_END_CNT
+			, STATS_DATE
+			, ASSIGN_FST_TIME
+			, CSTM_WAIT_TIME
+			, CNSR_WAIT_TIME
+			, CHAT_TOTAL_TIME
+			, AFTER_TIME
+			, ASSIGN_WAIT_TIME
+			, ASSIGN_BFR_END_CNT
+			, ASSIGN_AFT_END_CNT
+			, CTG_NUM
+			, DEPART_CD
+			, CREATE_DT
+			, CSTM_LINK_DIV_CD
+			)
+			SELECT 
+				shfda.seq_SQI_NUM.nextval
+				, G.* FROM
+				(
+					SELECT 
+				 	member_uid
+					, count(1)																											AS cnsr_end_cnt
+					, #{regDate}																										as reg_date
+					, nvl(sum(ass_aft_frst), 0)																					AS ass_aft_frst
+					, nvl(sum(cstm_wait_time) / count(1), 0) 															AS cstm_wait_time
+					, nvl(sum(cnsr_wait_time) / count(1), 0) 															AS cnsr_wait_time
+					, nvl(SUM(elapse_time), 0) 																				AS elapse_time
+					, nvl(sum(after_time) / decode(sum(after_cnt), 0, NULL, sum(after_cnt)), 0)		AS after_time
+					, nvl(sum(assign_wait_time)	 / count(1), 0)														AS assign_wait_time
+					, nvl(sum(ass_bfr_yn), 0)																					AS ass_bfr_cnt
+					, nvl(sum(ass_aft_yn), 0)																					AS ass_aft_cnt
+					, ctg_last_cd
+					, depart_cd 																										AS depart_cd
+					, sysdate																											as create_dt
+					, cstm_link_div_cd
+				FROM(
+					select 
+						a.MEMBER_UID					AS member_uid
+						, (
+							(SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'SUBMIT_COUNSELOR')
+							-
+							(SELECT min(REG_DT) FROM shfda.tb_chat WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR') 
+						) * 86400 				AS ass_aft_frst		--배정후 첫응대 소요시간
+						, (
+							(a.last_chat_dt - (SELECT min(reg_dt) FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND BOT_INTENT = 'ASSIGN_COUNSELOR')) * 86400 
+						)						AS elapse_time	 		--총 대화시간 (IPCC 접수에서 배정시간으로 변경)
+						, (SELECT min(c.REG_DT) FROM shfda.tb_chat c WHERE c.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND c.BOT_INTENT = 'ASSIGN_COUNSELOR' ) AS assign_dt		--배정시간
+			 			, (
+			 				SELECT 
+								sum(
+								((
+									SELECT next_chat FROM ( 
+									SELECT reg_dt AS next_chat FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND SENDER_DIV_CD = 'C' AND chat_num > cw.CHAT_NUM ORDER BY REG_DT
+									) WHERE rownum = 1
+								) - cw.reg_dt) * 86400
+								) / count(1) 		
+			 				FROM shfda.tb_chat cw WHERE cw.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND cw.SENDER_DIV_CD = 'U' GROUP BY cw.CHAT_ROOM_UID
+			 			) AS cstm_wait_time		--고객대기시간
+			 			, (
+			 				SELECT 
+								sum(
+								((
+									SELECT next_chat FROM ( 
+										SELECT reg_dt AS next_chat FROM shfda.tb_CHAT WHERE CHAT_ROOM_UID = a.CHAT_ROOM_UID AND SENDER_DIV_CD = 'U' AND chat_num > cw.CHAT_NUM ORDER BY REG_DT
+									) WHERE rownum = 1
+								) - cw.reg_dt) * 86400
+								) / count(1)	 		
+			 				FROM shfda.tb_chat cw WHERE cw.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND cw.SENDER_DIV_CD = 'C' GROUP BY cw.CHAT_ROOM_UID
+			 			) AS cnsr_wait_time		--상담원대기시간
+			 			, CASE WHEN b.UPDATER IS NOT NULL THEN ( b.UPDATE_DT - a.ROOM_END_DT) * 86400 ELSE 0 END  AS after_time
+			 			, CASE WHEN b.UPDATER IS NOT NULL THEN 1 ELSE 0 END  										AS after_cnt
+			 			, (
+			 				(SELECT min(c.REG_DT) FROM shfda.tb_chat c WHERE c.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND c.BOT_INTENT = 'ASSIGN_COUNSELOR' )
+			 				- (SELECT min(c.REG_DT) FROM shfda.tb_chat c WHERE c.CHAT_ROOM_UID = a.CHAT_ROOM_UID AND c.BOT_INTENT = 'REQUEST_COUNSELOR' ) 
+			 			) * 86400 AS assign_wait_time
+			 			, (CASE WHEN a.END_DIV_CD = 'C_CSTM_ASSIGN_CNSR' THEN 1 ELSE 0 END) AS ass_aft_yn
+			 			, (CASE WHEN a.END_DIV_CD IN ('C_CSTM_WAIT_CNSR', 'COUNSELOR_POOL_OVER') THEN 1 ELSE 0 END) AS ass_bfr_yn
+			 			, (CASE WHEN b.DEP_3_CTG_CD IS NULL THEN a.CTG_NUM ELSE b.DEP_3_CTG_CD end) AS ctg_last_cd
+			 			, a.DEPART_CD
+			 			, a.CSTM_LINK_DIV_CD
+				 	from shfda.tb_chat_room a 
+				 			LEFT OUTER JOIN shfda.tb_CHAT_END_INFO b ON (a.CHAT_ROOM_UID = b.CHAT_ROOM_UID)  
+				 	where 1=1
+				 		AND a.room_end_dt > to_date(#{regDate}, 'yyyymmdd') and  a.room_end_dt <![CDATA[<]]> to_date(#{regDate}, 'yyyymmdd') + 1
+				 		AND a.END_DIV_CD != 'CENTER_OFF_DUTY'
+				 		AND a.cstm_uid != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671' 
+				 		AND TO_NUMBER(a.MEMBER_UID) <![CDATA[<]]>  '9999999991'
+				 		AND a.END_YN = 'Y'
+				 	) r
+				 	GROUP BY member_uid, ctg_last_cd, depart_cd, CSTM_LINK_DIV_CD
+				) G
+	</insert>
+	
+	<delete id="deleteSQILIst">
+		delete from shfda.tb_STATS_SQI where STATS_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	
+	<insert id="insertBillList">
+		/* report.insertBillList */
+	INSERT INTO shfda.tb_KAKAO_BILL_DATE
+		(BILL_SEQ
+		, REG_DATE
+		, TOTAL_CNT
+		, BILL_CNT
+		, CREATE_DT)
+	SELECT 
+		shfda.seq_STAT_BILL.nextval
+		, TRUNC(TO_DATE(#{regDateKakao}, 'yyyy-mm-dd HH24:mi:ss')) as reg_date
+		,(
+			SELECT count(*)
+				FROM shfda.tb_chat_room r WHERE (MEMBER_UID ='9999999996' OR TO_NUMBER(member_uid) <![CDATA[<]]> '9999999991') 
+				AND CSTM_LINK_DIV_CD = 'B'
+				AND ROOM_create_DT >= TO_DATE(#{regDateKakao}, 'yyyy-mm-dd HH24:mi:ss') 
+				AND ROOM_create_DT <![CDATA[<]]> TO_DATE(#{regDateKakao}, 'yyyy-mm-dd HH24:mi:ss')+1
+				and CSTM_UID != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+			
+			
+		) AS total_cnt
+		,(
+			SELECT count(*) from
+			(
+				SELECT 
+				count(1)
+				FROM shfda.tb_chat_room r WHERE (MEMBER_UID ='9999999996' OR TO_NUMBER(member_uid) <![CDATA[<]]> '9999999991') 
+				AND CSTM_LINK_DIV_CD = 'B'
+				AND ROOM_create_DT >= TO_DATE(#{regDateKakao}, 'yyyy-mm-dd HH24:mi:ss') 
+				AND ROOM_create_DT <![CDATA[<]]> TO_DATE(#{regDateKakao}, 'yyyy-mm-dd HH24:mi:ss')+1
+				and CSTM_UID != '61894ef0-1f4f-4bd0-b6ef-bb38a9a62671'
+				GROUP BY r.CSTM_UID
+			)
+		) AS bill_cnt
+		, sysdate
+	FROM DUAL
+	
+	</insert>
+	
+	<delete id="deleteBillList">
+		delete from shfda.tb_KAKAO_BILL_DATE where REG_DATE = to_date(#{regDate}, 'yyyymmdd')
+	</delete>
+	
+	
+</mapper>
